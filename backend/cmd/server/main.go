@@ -9,9 +9,10 @@ import (
 	"syscall"
 	"time"
 
+	"alyama-backend/internal/config"
+	"alyama-backend/internal/database"
+
 	"github.com/gin-gonic/gin"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
