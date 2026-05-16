@@ -1,25 +1,25 @@
+import { supabase } from '../lib/supabase';
 import type { LoginFormData, RegisterFormData, AuthResponse } from '../types/auth.types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
 export const loginUser = async (data: LoginFormData): Promise<AuthResponse> => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+    const { data: session, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
     });
-    return response.json();
+
+    if (error) return { error: error.message };
+    return { token: session.session?.access_token };
 };
 
 export const registerUser = async (data: RegisterFormData): Promise<AuthResponse> => {
-    const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            username: data.username,
-            email: data.email,
-            password: data.password
-        }),
+    const { data: result, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+            data: { username: data.username }
+        }
     });
-    return response.json();
+
+    if (error) return { error: error.message };
+    return { id: result.user?.id, message: 'User created successfully' };
 };
