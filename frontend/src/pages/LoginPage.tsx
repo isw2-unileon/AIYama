@@ -21,7 +21,7 @@ export const LoginPage = () => {
             if (response.token) {
                 localStorage.setItem('token', response.token);
             }
-            navigate('/dashboard');
+            navigate('/onboarding');
         } catch {
             setError('Something went wrong. Please try again.');
         } finally {
