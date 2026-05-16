@@ -1,18 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// que forma tiene un "Bloque Fijo"
+export type FixedBlock = {
+    name: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+};
+
+// añadimos la lista de bloques a nuestros datos principales
 export type OnboardingData = {
     chronotype: string;
     sleepHoursGoal: number;
+    fixedBlocks: FixedBlock[]; // lista vacía inicialmente
 };
 
 export const OnboardingPage = () => {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(1); // la variable step sera la que se mueva entre el paso 1 y 2 del formulario
 
     const [formData, setFormData] = useState<OnboardingData>({
         chronotype: '',
         sleepHoursGoal: 8,
+        fixedBlocks: [],
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -22,6 +33,10 @@ export const OnboardingPage = () => {
     const handleNextStep = (e: React.FormEvent) => {
         e.preventDefault();
         setStep(2);
+    };
+
+    const handleFinalSubmit = () => {
+        navigate('/dashboard'); 
     };
 
     return (
@@ -75,6 +90,10 @@ export const OnboardingPage = () => {
                         <p>Aquí irá el componente de los bloques fijos...</p>
                         <button onClick={() => setStep(1)} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', marginTop: '10px' }}>
                             Volver atrás
+                        </button>
+                        
+                        <button onClick={handleFinalSubmit} style={{ marginTop: '10px', marginLeft: '10px' }}>
+                            Finalizar Onboarding
                         </button>
                     </div>
                 )}
