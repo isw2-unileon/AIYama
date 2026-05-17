@@ -11,6 +11,7 @@ import (
 
 	"alyama-backend/internal/config"
 	"alyama-backend/internal/database"
+	"alyama-backend/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,6 +39,7 @@ func main() {
 		api.GET("/hello", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 		})
+		handlers.SetupOnboardingRoutes(api, db)
 	}
 
 	srv := &http.Server{
@@ -51,7 +53,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		slog.Info("server listening", "addr", srv.Addr)
+		logger.Info("server listening", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("server error", "error", err)
 			os.Exit(1)
@@ -59,7 +61,7 @@ func main() {
 	}()
 
 	<-ctx.Done()
-	slog.Info("shutting down server")
+	logger.Info("shutting down server")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
