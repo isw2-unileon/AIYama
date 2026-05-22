@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"alyama-backend/internal/config"
-	"alyama-backend/internal/database"
-	"alyama-backend/internal/handlers"
+	"aiyama-backend/internal/config"
+	"aiyama-backend/internal/database"
+	"aiyama-backend/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,6 +40,7 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 		})
 		handlers.SetupOnboardingRoutes(api, db)
+		handlers.SetupFlexibleTaskRoutes(api, db)
 	}
 
 	srv := &http.Server{
