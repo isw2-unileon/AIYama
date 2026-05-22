@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"alyama-backend/internal/models"
-	"alyama-backend/internal/repository"
+	"aiyama-backend/internal/models"
+	"aiyama-backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"

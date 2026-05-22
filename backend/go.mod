@@ -1,4 +1,4 @@
-module alyama-backend
+module aiyama-backend
 
 go 1.25.0
 

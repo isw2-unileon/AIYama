@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"alyama-backend/internal/models"
+	"aiyama-backend/internal/models"
 
 	"github.com/jmoiron/sqlx"
 )
