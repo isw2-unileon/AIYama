@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"aiyama-backend/internal/models"
 )
 
 // FreeSlot represents a time slot that is available for scheduling an event.
@@ -43,5 +41,7 @@ func MinutesToTime(minutes int) string {
 }
 
 // FinfFreeSlotsForDay is the motor function that unifies the sleep, flexible and fixed events to find the free slots for a given day.
-func FindFreeSlotsForDay(dayOfWeek int, fixedBlocks []models.FixedBlock, scheduledEvents []SheduledEvent, sleepStart string, sleepEnd string, taskDuration int) []FreeSlot {
+/*func FindFreeSlotsForDay(dayOfWeek int, fixedBlocks []models.FixedBlock, scheduledEvents []SheduledEvent, sleepStart string, sleepEnd string, taskDuration int) []FreeSlot {
+	//por hacer
 }
+*/
