@@ -35,8 +35,46 @@ export const OnboardingPage = () => {
         setStep(2);
     };
 
-    const handleFinalSubmit = () => {
-        navigate('/dashboard'); 
+    const handleFinalSubmit = async () => {
+        try{
+            // here we prepare the data to send to the backend, we can do some transformations if needed
+            const payload = {
+                user_id: "user-123", //later we will get the real user id from the auth context or similar
+                chronotype: formData.chronotype,
+                sleep_hours_goal: Number(formData.sleepHoursGoal),
+                sleep_start: "23:00", // for now we set fixed sleep times, but ideally we would ask the user for them in the form
+                sleep_end: "07:00",
+                fixed_blocks: formData.fixedBlocks.map(block => ({
+                    name: block.name,
+                    day_of_week: Number(block.dayOfWeek),
+                    start_time: block.startTime,
+                    end_time: block.endTime
+                }))
+            };
+            
+            // we send it to the window of backend (which will be listened by the main process and then forwarded to the real backend)
+            const response = await fetch('http://localhost:8080/api/onboarding', { // endpoint
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            // we check if the response is ok
+            if (response.ok) {
+                console.log("Response status:", response.status);
+                navigate('/dashboard'); // we navigate to the dashboard or main page of the app after successful onboarding
+            }else{
+                const errorData = await response.json();
+                console.error("Error response from backend:", errorData);
+                alert("Hubo un error al guardar tu configuración. Por favor, inténtalo de nuevo.");
+            }
+        }catch(error){
+            console.error("Error during onboarding submission:", error);
+            alert("No se pudo conectar con el servidor. ¿Está encendido el backend?");
+            return;
+        }
     };
 
     // --- TEMPORARY STATE TO ADD A BLOCK ---
