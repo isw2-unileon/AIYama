@@ -36,10 +36,10 @@ export const OnboardingPage = () => {
     };
 
     const handleFinalSubmit = async () => {
-        try{
+        try {
             // here we prepare the data to send to the backend, we can do some transformations if needed
             const payload = {
-                user_id: "user-123", //later we will get the real user id from the auth context or similar
+                user_id: "11111111-1111-1111-1111-111111111111", //later we will get the real user id from the auth context or similar
                 chronotype: formData.chronotype,
                 sleep_hours_goal: Number(formData.sleepHoursGoal),
                 sleep_start: "23:00", // for now we set fixed sleep times, but ideally we would ask the user for them in the form
@@ -51,9 +51,9 @@ export const OnboardingPage = () => {
                     end_time: block.endTime
                 }))
             };
-            
+
             // we send it to the window of backend (which will be listened by the main process and then forwarded to the real backend)
-            const response = await fetch('http://localhost:8080/api/onboarding', { // endpoint
+            const response = await fetch('/api/onboarding', { // endpoint
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,12 +65,12 @@ export const OnboardingPage = () => {
             if (response.ok) {
                 console.log("Response status:", response.status);
                 navigate('/dashboard'); // we navigate to the dashboard or main page of the app after successful onboarding
-            }else{
+            } else {
                 const errorData = await response.json();
                 console.error("Error response from backend:", errorData);
                 alert("Hubo un error al guardar tu configuración. Por favor, inténtalo de nuevo.");
             }
-        }catch(error){
+        } catch (error) {
             console.error("Error during onboarding submission:", error);
             alert("No se pudo conectar con el servidor. ¿Está encendido el backend?");
             return;
@@ -119,10 +119,10 @@ export const OnboardingPage = () => {
                     <form onSubmit={handleNextStep} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
                         <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label htmlFor="chronotype" style={{ fontWeight: '500' }}>¿En qué momento del día rindes mejor? (Cronotipo)</label>
-                            <select 
-                                id="chronotype" 
-                                name="chronotype" 
-                                value={formData.chronotype} 
+                            <select
+                                id="chronotype"
+                                name="chronotype"
+                                value={formData.chronotype}
                                 onChange={handleChange}
                                 required
                                 style={{ padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--code-bg)', color: 'var(--text-h)', width: '100%', boxSizing: 'border-box' }}
