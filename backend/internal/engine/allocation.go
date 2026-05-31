@@ -111,7 +111,7 @@ func FindFreeSlotsForDay(dayOfWeek int, fixedBlocks []models.FixedBlock, schedul
 	}
 
 	// Check if there is a free slot at the end of the day
-	if currentFreeStart != -1 {
+	if currentFreeStart != -1 && currentFreeLength >= taskDuration {
 		freeSlots = append(freeSlots, FreeSlot{
 			DayOfWeek: dayOfWeek,
 			StartTime: MinutesToTime(currentFreeStart),
