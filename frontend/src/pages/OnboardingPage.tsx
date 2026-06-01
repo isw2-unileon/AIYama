@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase'; 
 
 // what shape does a "Fixed Block" have?
 export type FixedBlock = {
@@ -13,6 +14,8 @@ export type FixedBlock = {
 export type OnboardingData = {
     chronotype: string;
     sleepHoursGoal: number;
+    sleepStart: string; // we can ask the user for this in the form, but for now we set it fixed
+    sleepEnd: string; // we can ask the user for this in the form, but for now we set it fixed
     fixedBlocks: FixedBlock[]; // initially empty list
 };
 
@@ -23,6 +26,8 @@ export const OnboardingPage = () => {
     const [formData, setFormData] = useState<OnboardingData>({
         chronotype: '',
         sleepHoursGoal: 8,
+        sleepStart: '23:00', // by default
+        sleepEnd: '07:00', // by default
         fixedBlocks: [],
     });
 
@@ -36,14 +41,24 @@ export const OnboardingPage = () => {
     };
 
     const handleFinalSubmit = async () => {
-        try{
+        try {
+            // we get the user from supabase to have the user id to send to the backend
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                alert("No se ha encontrado el usuario. Por favor, inicia sesión de nuevo.");
+                navigate('/login');
+                return;
+            }
+
+
             // here we prepare the data to send to the backend, we can do some transformations if needed
             const payload = {
-                user_id: "user-123", //later we will get the real user id from the auth context or similar
+                user_id: user.id, // we send the user id to associate the onboarding data with the correct user in the backend
                 chronotype: formData.chronotype,
                 sleep_hours_goal: Number(formData.sleepHoursGoal),
-                sleep_start: "23:00", // for now we set fixed sleep times, but ideally we would ask the user for them in the form
-                sleep_end: "07:00",
+                sleep_start: formData.sleepStart, // it reads the hour in the form
+                sleep_end: formData.sleepEnd, // it reads the hour in the form
                 fixed_blocks: formData.fixedBlocks.map(block => ({
                     name: block.name,
                     day_of_week: Number(block.dayOfWeek),
@@ -53,7 +68,7 @@ export const OnboardingPage = () => {
             };
             
             // we send it to the window of backend (which will be listened by the main process and then forwarded to the real backend)
-            const response = await fetch('http://localhost:8080/api/onboarding', { // endpoint
+            const response = await fetch('/api/onboarding', { // endpoint (before: http://localhost:8080/api/onboarding, now just /api/onboarding because we are sending it to the window and not directly to the backend)
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -143,6 +158,32 @@ export const OnboardingPage = () => {
                                 min="4"
                                 max="12"
                                 value={formData.sleepHoursGoal}
+                                onChange={handleChange}
+                                required
+                                style={{ padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--code-bg)', color: 'var(--text-h)', width: '100%', boxSizing: 'border-box' }}
+                            />
+                        </div>
+
+                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <label htmlFor="sleepStart" style={{ fontWeight: '500' }}>¿A qué hora sueles acostarte?</label>
+                            <input
+                                id="sleepStart"
+                                name="sleepStart"
+                                type="time"
+                                value={formData.sleepStart}
+                                onChange={handleChange}
+                                required
+                                style={{ padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--code-bg)', color: 'var(--text-h)', width: '100%', boxSizing: 'border-box' }}
+                            />
+                        </div>
+
+                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <label htmlFor="sleepEnd" style={{ fontWeight: '500' }}>¿A qué hora sueles despertarte?</label>
+                            <input
+                                id="sleepEnd"
+                                name="sleepEnd"
+                                type="time"
+                                value={formData.sleepEnd}
                                 onChange={handleChange}
                                 required
                                 style={{ padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--code-bg)', color: 'var(--text-h)', width: '100%', boxSizing: 'border-box' }}
