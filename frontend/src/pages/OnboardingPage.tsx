@@ -66,7 +66,7 @@ export const OnboardingPage = () => {
                     end_time: block.endTime
                 }))
             };
-            
+
             // we send it to the window of backend (which will be listened by the main process and then forwarded to the real backend)
             const response = await fetch('/api/onboarding', { // endpoint (before: http://localhost:8080/api/onboarding, now just /api/onboarding because we are sending it to the window and not directly to the backend)
                 method: 'POST',
@@ -80,12 +80,12 @@ export const OnboardingPage = () => {
             if (response.ok) {
                 console.log("Response status:", response.status);
                 navigate('/dashboard'); // we navigate to the dashboard or main page of the app after successful onboarding
-            }else{
+            } else {
                 const errorData = await response.json();
                 console.error("Error response from backend:", errorData);
                 alert("Hubo un error al guardar tu configuración. Por favor, inténtalo de nuevo.");
             }
-        }catch(error){
+        } catch (error) {
             console.error("Error during onboarding submission:", error);
             alert("No se pudo conectar con el servidor. ¿Está encendido el backend?");
             return;
@@ -134,10 +134,10 @@ export const OnboardingPage = () => {
                     <form onSubmit={handleNextStep} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
                         <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label htmlFor="chronotype" style={{ fontWeight: '500' }}>¿En qué momento del día rindes mejor? (Cronotipo)</label>
-                            <select 
-                                id="chronotype" 
-                                name="chronotype" 
-                                value={formData.chronotype} 
+                            <select
+                                id="chronotype"
+                                name="chronotype"
+                                value={formData.chronotype}
                                 onChange={handleChange}
                                 required
                                 style={{ padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--code-bg)', color: 'var(--text-h)', width: '100%', boxSizing: 'border-box' }}
