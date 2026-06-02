@@ -21,7 +21,7 @@ func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, 
 	defer client.Close() // close the client connection when done
 
 	// choose the Gemini model to use for generating the schedule proposal
-	model := client.GenerativeModel("gemini-1.5-flash")
+	model := client.GenerativeModel("gemini-3.5-flash")
 
 	// configure the system instruction (rules and guidelines for the model)
 	model.SystemInstruction = &genai.Content{

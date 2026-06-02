@@ -10,6 +10,7 @@ services:
       - PORT=8080
       - GIN_MODE=release
       - DATABASE_URL=${DATABASE_URL}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
 
 volumes:
   pgdata:
