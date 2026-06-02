@@ -12,6 +12,7 @@ type Config struct {
 	CORSAllowOrigin string
 	DatabaseURL     string
 	JWTSecret       string
+	GeminiAPIKey    string
 }
 
 func Load() *Config {
@@ -23,6 +24,7 @@ func Load() *Config {
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
 		DatabaseURL:     getEnv("DATABASE_URL", ""),
 		JWTSecret:       getEnv("JWT_SECRET", ""),
+		GeminiAPIKey:    getEnv("GEMINI_API_KEY", ""),
 	}
 }
 
