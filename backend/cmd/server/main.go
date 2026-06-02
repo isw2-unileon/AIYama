@@ -41,6 +41,7 @@ func main() {
 		})
 		handlers.SetupOnboardingRoutes(api, db)
 		handlers.SetupFlexibleTaskRoutes(api, db)
+		handlers.SetupAIRoutes(api, db, cfg)
 	}
 
 	srv := &http.Server{
