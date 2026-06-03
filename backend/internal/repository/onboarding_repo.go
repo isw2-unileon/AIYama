@@ -35,6 +35,13 @@ func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayl
 	data.UserID = userID
 	for i := range data.FixedBlocks {
 		data.FixedBlocks[i].UserID = userID
+
+		d := data.FixedBlocks[i].DayOfWeek
+		d = ((d % 7) + 7) % 7
+		if d == 0 {
+			d = 7
+		}
+		data.FixedBlocks[i].DayOfWeek = d
 	}
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -72,4 +79,24 @@ func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayl
 	}
 	// commit the transaction only if successful
 	return tx.Commit()
+}
+
+func GetOnboardingData(ctx context.Context, db *sqlx.DB, userID string) (*models.OnboardingPayload, error) {
+	var payload models.OnboardingPayload
+
+	profileQuery := `SELECT chronotype, sleep_hours_goal, sleep_start, sleep_end FROM activity_profiles WHERE user_id = $1`
+	err := db.GetContext(ctx, &payload, profileQuery, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	blocksQuery := `SELECT name, day_of_week, start_time, end_time FROM fixed_blocks WHERE user_id = $1`
+
+	payload.FixedBlocks = []models.FixedBlock{}
+	err = db.SelectContext(ctx, &payload.FixedBlocks, blocksQuery, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &payload, nil
 }

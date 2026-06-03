@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"aiyama-backend/internal/engine"
 	"aiyama-backend/internal/models"
@@ -87,11 +88,24 @@ func UpdateFlexibleTask(ctx context.Context, db *sqlx.DB, task *models.FlexibleT
 	return err
 }
 
-func DeleteFlexibleTask(ctx context.Context, db *sqlx.DB, id string) error {
+func DeleteFlexibleTask(ctx context.Context, db *sqlx.DB, id string, userID string) error {
 	query := `
 		DELETE FROM flexible_tasks 
-		WHERE id = $1
+		WHERE id = $1 AND user_id = $2
 	`
-	_, err := db.ExecContext(ctx, query, id)
-	return err
+	result, err := db.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("task not found or unauthorized")
+	}
+
+	return nil
 }
