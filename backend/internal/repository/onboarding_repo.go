@@ -10,6 +10,22 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// GetUserSleepTimes retrieves the user's sleep start and end times from the database.
+func GetUserSleepTimes(ctx context.Context, db *sqlx.DB, userID string) (string, string, error) {
+	var sleepStart, sleepEnd string
+	query := `SELECT sleep_start, sleep_end FROM activity_profiles WHERE user_id = $1`
+	err := db.QueryRowContext(ctx, query, userID).Scan(&sleepStart, &sleepEnd)
+	return sleepStart, sleepEnd, err
+}
+
+// GetFixedBlocksByUserID retrieves the fixed blocks for a given user from the database.
+func GetFixedBlocksByUserID(ctx context.Context, db *sqlx.DB, userID string) ([]models.FixedBlock, error) {
+	var blocks []models.FixedBlock
+	query := `SELECT id, user_id, name, day_of_week, start_time, end_time FROM fixed_blocks WHERE user_id = $1`
+	err := db.SelectContext(ctx, &blocks, query, userID)
+	return blocks, err
+}
+
 // insert the activity profile and fixed blocks into database
 func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayload) error {
 	userID, ok := ctx.Value(middleware.UserIDKey).(string)
