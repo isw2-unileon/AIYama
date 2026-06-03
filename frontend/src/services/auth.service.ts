@@ -1,25 +1,64 @@
-import { supabase } from '../lib/supabase';
 import type { LoginFormData, RegisterFormData, AuthResponse } from '../types/auth.types';
 
 export const loginUser = async (data: LoginFormData): Promise<AuthResponse> => {
-    const { data: session, error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-    });
+    try {
+        const response = await fetch('/api/users/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: data.email,
+                password: data.password,
+            }),
+        });
 
-    if (error) return { error: error.message };
-    return { token: session.session?.access_token };
+        const result = await response.json();
+
+        if (!response.ok) {
+            return { error: result.error || 'Correo o contraseña incorrectos' };
+        }
+
+        if (result.user_id) {
+            localStorage.setItem('current_user_id', result.user_id);
+        }
+
+        return { token: result.token, id: result.user_id };
+
+    } catch (err) {
+        console.error("Login request error:", err);
+        return { error: 'Error de red' };
+    }
 };
 
 export const registerUser = async (data: RegisterFormData): Promise<AuthResponse> => {
-    const { data: result, error } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-            data: { username: data.username }
-        }
-    });
+    try {
+        const response = await fetch('/api/users/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: data.username,
+                email: data.email,
+                password: data.password,
+            }),
+        });
 
-    if (error) return { error: error.message };
-    return { id: result.user?.id, message: 'User created successfully' };
+        const result = await response.json();
+
+        if (!response.ok) {
+            return { error: result.error || 'Error al crear el usuario' };
+        }
+
+        if (result.user_id) {
+            localStorage.setItem('current_user_id', result.user_id);
+        }
+
+        return { id: result.user_id, message: result.message || 'Usuario creado correctamente' };
+
+    } catch (err) {
+        console.error("Register request error:", err);
+        return { error: 'Error de red.' };
+    }
 };
