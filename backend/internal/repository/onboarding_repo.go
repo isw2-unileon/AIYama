@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"errors"
 
+	"aiyama-backend/internal/middleware"
 	"aiyama-backend/internal/models"
 
 	"github.com/jmoiron/sqlx"
@@ -10,6 +12,14 @@ import (
 
 // insert the activity profile and fixed blocks into database
 func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayload) error {
+	userID, ok := ctx.Value(middleware.UserIDKey).(string)
+	if !ok {
+		return errors.New("no se encontró el user_id en el contexto")
+	}
+	data.UserID = userID
+	for i := range data.FixedBlocks {
+		data.FixedBlocks[i].UserID = userID
+	}
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -36,7 +46,7 @@ func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayl
 			VALUES (:user_id, :name, :day_of_week, :start_time, :end_time)
 		`
 		for _, block := range data.FixedBlocks {
-			block.UserID = data.UserID
+			block.UserID = userID
 			_, err = tx.NamedExecContext(ctx, blocksQuery, block)
 			if err != nil {
 				tx.Rollback()

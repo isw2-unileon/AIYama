@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase'; 
 
 // what shape does a "Fixed Block" have?
 export type FixedBlock = {
@@ -43,9 +42,9 @@ export const OnboardingPage = () => {
     const handleFinalSubmit = async () => {
         try {
             // we get the user from supabase to have the user id to send to the backend
-            const { data: { user } } = await supabase.auth.getUser();
+            const token = localStorage.getItem('token');
 
-            if (!user) {
+            if (!token) {
                 alert("No se ha encontrado el usuario. Por favor, inicia sesión de nuevo.");
                 navigate('/login');
                 return;
@@ -54,7 +53,6 @@ export const OnboardingPage = () => {
 
             // here we prepare the data to send to the backend, we can do some transformations if needed
             const payload = {
-                user_id: user.id, // we send the user id to associate the onboarding data with the correct user in the backend
                 chronotype: formData.chronotype,
                 sleep_hours_goal: Number(formData.sleepHoursGoal),
                 sleep_start: formData.sleepStart, // it reads the hour in the form
@@ -72,6 +70,7 @@ export const OnboardingPage = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(payload),
             });

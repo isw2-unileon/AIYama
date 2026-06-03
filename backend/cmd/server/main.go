@@ -12,6 +12,7 @@ import (
 	"aiyama-backend/internal/config"
 	"aiyama-backend/internal/database"
 	"aiyama-backend/internal/handlers"
+	"aiyama-backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,12 +37,15 @@ func main() {
 
 	api := r.Group("/api")
 	{
-		api.GET("/hello", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
-		})
-		handlers.SetupOnboardingRoutes(api, db)
-		handlers.SetupFlexibleTaskRoutes(api, db)
-		handlers.SetupAIRoutes(api, db, cfg)
+		handlers.SetupUserRoutes(api, db)
+
+		protected := api.Group("/")
+		protected.Use(middleware.AuthRequired())
+		{
+			handlers.SetupOnboardingRoutes(protected, db)
+			handlers.SetupFlexibleTaskRoutes(protected, db)
+			handlers.SetupAIRoutes(protected, db, cfg)
+		}
 	}
 
 	srv := &http.Server{
