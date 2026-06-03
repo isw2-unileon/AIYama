@@ -3,10 +3,28 @@ package repository
 import (
 	"context"
 
+	"aiyama-backend/internal/engine"
 	"aiyama-backend/internal/models"
 
 	"github.com/jmoiron/sqlx"
 )
+
+// GetCalendarEventsByUserID retrieves the calendar events for a given user from the database.
+func GetCalendarEventsByUserID(ctx context.Context, db *sqlx.DB, userID string) ([]engine.ScheduledEvent, error) {
+	var events []engine.ScheduledEvent
+
+	// we only want the events that are proposed or confirmed, because the rejected ones are not relevant for the scheduling
+	query := `
+		SELECT title, start_time, end_time 
+		FROM calendar_events 
+		WHERE user_id = $1 AND status IN ('proposed', 'confirmed')
+	`
+	err := db.SelectContext(ctx, &events, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
 
 func CreateFlexibleTask(ctx context.Context, db *sqlx.DB, task *models.FlexibleTask) error {
 	query := `
