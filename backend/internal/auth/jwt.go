@@ -13,7 +13,6 @@ func getJWTSecret() []byte {
 	return []byte(secret)
 }
 
-// GenerateToken creates a signed token containing the user ID
 func GenerateToken(userID string) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
@@ -24,7 +23,6 @@ func GenerateToken(userID string) (string, error) {
 	return token.SignedString(getJWTSecret())
 }
 
-// VerifyToken reads the token and checks if the signature is valid
 func VerifyToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return getJWTSecret(), nil

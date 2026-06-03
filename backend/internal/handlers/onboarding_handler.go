@@ -13,6 +13,7 @@ import (
 
 func SetupOnboardingRoutes(router *gin.RouterGroup, db *sqlx.DB) {
 	router.POST("/onboarding", createOnBoardingHandler(db))
+	router.GET("/onboarding", getOnboardingHandler(db))
 }
 
 func createOnBoardingHandler(db *sqlx.DB) gin.HandlerFunc {
@@ -31,5 +32,20 @@ func createOnBoardingHandler(db *sqlx.DB) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusCreated, gin.H{"message": "Onboarding completed successfully"})
+	}
+}
+
+func getOnboardingHandler(db *sqlx.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.MustGet("user_id").(string)
+
+		payload, err := repository.GetOnboardingData(c.Request.Context(), db, userID)
+		if err != nil {
+			slog.Error("Error interno obteniendo onboarding", "userID", userID, "detalle_error", err.Error())
+			c.JSON(http.StatusNotFound, gin.H{"error": "Onboarding data not found for this user"})
+			return
+		}
+
+		c.JSON(http.StatusOK, payload)
 	}
 }

@@ -15,7 +15,7 @@ func SetupFlexibleTaskRoutes(routes *gin.RouterGroup, db *sqlx.DB) {
 	tasks := routes.Group("/tasks")
 	{
 		tasks.POST("/", createTaskHandler(db))
-		tasks.GET("/user/:user_id", getTasksByUserHandler(db))
+		tasks.GET("/", getTasksByUserHandler(db))
 		tasks.GET("/:id", getTaskByIDHandler(db))
 		tasks.PUT("/:id", updateTaskHandler(db))
 		tasks.DELETE("/:id", deleteTaskHandler(db))
@@ -30,6 +30,9 @@ func createTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data", "details": err.Error()})
 			return
 		}
+
+		task.UserID = c.MustGet("user_id").(string)
+
 		if err := repository.CreateFlexibleTask(c.Request.Context(), db, &task); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create flexible task", "details": err.Error()})
 			return
@@ -40,7 +43,8 @@ func createTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 
 func getTasksByUserHandler(db *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID := c.Param("user_id")
+		userID := c.MustGet("user_id").(string)
+
 		tasks, err := repository.GetFlexibleTasksByUserID(c.Request.Context(), db, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks", "details": err.Error()})
@@ -83,6 +87,8 @@ func updateTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 		}
 		tasks.ID = id
 
+		tasks.UserID = c.MustGet("user_id").(string)
+
 		if err := repository.UpdateFlexibleTask(c.Request.Context(), db, &tasks); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update flexible task", "details": err.Error()})
 			return
@@ -94,10 +100,17 @@ func updateTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 func deleteTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
-		if err := repository.DeleteFlexibleTask(c.Request.Context(), db, id); err != nil {
+		userID := c.MustGet("user_id").(string)
+		if err := repository.DeleteFlexibleTask(c.Request.Context(), db, id, userID); err != nil {
+			if err.Error() == "task not found or unauthorized" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "The task doesnt exists or its not yours"})
+				return
+			}
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete flexible task", "details": err.Error()})
 			return
 		}
+
 		c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
 	}
 }
