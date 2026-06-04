@@ -19,6 +19,7 @@ export const useChatbot = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingProposal, setPendingProposal] = useState<any>(null);
 
   // each time the messages state changes, we save the new state in localStorage to keep it updated. This way, the chat history is preserved across page reloads and browser sessions.
   useEffect(() => {
@@ -31,7 +32,6 @@ export const useChatbot = () => {
   // function to handle the user input, send it to the backend, and update the chat with the AI response. It also handles the loading state to show a spinner or disable inputs while waiting for the response.
   const handleSendMessage = async (taskName: string, duration: number, userId: string, chronotype: string) => {
     if (!taskName.trim()) return;
-
     // A) add the message of the user to the chat
     const newUserMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: `Quiero agendar: ${taskName} (${duration} min)` };
     setMessages((prev) => [...prev, newUserMsg]);
@@ -45,18 +45,45 @@ export const useChatbot = () => {
         duration_minutes: duration,
         weekly_frequency: 1, // default 1
         preferred_days: "Ninguno en particular",
-        chronotype: chronotype, 
+        chronotype: chronotype,
       };
 
       // C) call the service that sends the request to the backend and waits for the response
-      const aiResponseJSON = await aiService.proposeSchedule(requestData);
-      
+      const token = localStorage.getItem('token');
+      const aiResponseJSON = await aiService.proposeSchedule(requestData, token || '');
+      const startTime = aiResponseJSON.start_time || aiResponseJSON.scheduled_at;
+      const endTime = aiResponseJSON.end_time || aiResponseJSON.scheduled_end;
+      const reason = aiResponseJSON.reason || "Este hueco se adapta perfectamente a tus preferencias.";
+
+      setPendingProposal({
+        user_id: userId,
+        name: taskName,
+        duration_minutes: duration,
+        weekly_frequency: 1,
+        energy_level: "medium",
+        scheduled_at: aiResponseJSON.start_time || aiResponseJSON.scheduled_at,
+        scheduled_end: aiResponseJSON.end_time || aiResponseJSON.scheduled_end,
+      });
+
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+
+      const fechaTexto = startDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      const fechaCapitalizada = fechaTexto.charAt(0).toUpperCase() + fechaTexto.slice(1);
+      const horaInicio = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      const horaFin = endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      const mensajeVisual = `He encontrado este hueco:\n\n ${fechaCapitalizada}\n ${horaInicio} - ${horaFin}\n\n ${reason}\n\n¿Te parece bien?`;
+
       // D) add the AI response to the chat (marking it as a proposal for displaying the buttons)
-      const newAiMsg: ChatMessage = { 
-        id: (Date.now() + 1).toString(), 
-        sender: 'ai', 
-        text: `He encontrado este hueco:\n${JSON.stringify(aiResponseJSON)}\n¿Te parece bien?`,
-        isProposal: true 
+      const newAiMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: mensajeVisual,
+        isProposal: true
       };
       setMessages((prev) => [...prev, newAiMsg]);
 
@@ -69,14 +96,39 @@ export const useChatbot = () => {
   };
 
   // function for when the user clicks "YES".
-  const handleAcceptProposal = () => {
-    // FUTURE: here we would send a request to the backend to confirm the proposed schedule and add it to the user's calendar. For now, we just show a confirmation message in the chat.
-    const confirmMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: '¡Genial! Añadido al calendario.' };
-    setMessages((prev) => [...prev, confirmMsg]);
+  const handleAcceptProposal = async (onSuccess?: () => void) => {
+    if (!pendingProposal) return;
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(pendingProposal)
+      });
+
+      if (!response.ok) throw new Error('Error al guardar');
+
+      const confirmMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: '¡Genial! Tarea guardada correctamente en tu calendario.' };
+      setMessages((prev) => [...prev, confirmMsg]);
+
+      setPendingProposal(null);
+      if (onSuccess) onSuccess();
+
+    } catch (error) {
+      const errorMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: 'Error al guardar la tarea en el calendario.' };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // function for when the user clicks "NO"
   const handleRejectProposal = () => {
+    setPendingProposal(null);
     const rejectMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: 'Vaya, buscaré otra alternativa. Dime si prefieres algún día en concreto.' };
     setMessages((prev) => [...prev, rejectMsg]);
   };
@@ -84,6 +136,7 @@ export const useChatbot = () => {
   // function to clear the chat history.
   const handleClearChat = () => {
     setMessages([]);
+    setPendingProposal(null);
     localStorage.removeItem('chatbot_history');
   };
 

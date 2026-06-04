@@ -10,13 +10,14 @@ export interface ScheduleRequest {
 
 // The aiService object contains the proposeSchedule method, which sends a POST request to the backend endpoint that handles schedule proposals, passing the user input as JSON in the request body. It returns the response as JSON, which should contain the proposed schedule or an error message.
 export const aiService = {
-  proposeSchedule: async (data: ScheduleRequest) => {
+  proposeSchedule: async (data: ScheduleRequest, token: string) => {
     try {
-        // we send a POST request to the backend endpoint that handles schedule proposals, passing the user input as JSON in the request body
-        const response = await fetch('http://localhost:8080/api/propose-schedule', {
+      // we send a POST request to the backend endpoint that handles schedule proposals, passing the user input as JSON in the request body
+      const response = await fetch('/api/propose-schedule', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(data),
       });
