@@ -25,41 +25,45 @@ CREATE TABLE users
         name VARCHAR(100) NOT NULL,
         duration_minutes INT NOT NULL,
         weekly_frequency INT NOT NULL,
-        energy_level VARCHAR(20) CHECK (energy_level IN ('low', 'medium', 'high'))
+        energy_level VARCHAR(20) CHECK (energy_level IN ('low', 'medium', 'high')),
+        scheduled_at TIMESTAMP
+        WITH TIME ZONE, 
+        scheduled_end TIMESTAMP
+        WITH TIME ZONE
     );
 
-    CREATE TABLE calendar_events
-    (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        task_id UUID REFERENCES flexible_tasks(id) ON DELETE SET NULL,
-        title VARCHAR(150),
-        start_time TIMESTAMP
-        WITH TIME ZONE NOT NULL,
-    end_time TIMESTAMP
-        WITH TIME ZONE NOT NULL,
-    status VARCHAR
-        (20) DEFAULT 'proposed' CHECK
-        (status IN
-        ('proposed', 'confirmed', 'completed', 'cancelled'))
-);
-
-        CREATE TABLE calendar_snapshots
+        CREATE TABLE calendar_events
         (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-            previous_state_json JSONB NOT NULL,
-            created_at TIMESTAMP
-            WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            task_id UUID REFERENCES flexible_tasks(id) ON DELETE SET NULL,
+            title VARCHAR(150),
+            start_time TIMESTAMP
+            WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP
+            WITH TIME ZONE NOT NULL,
+    status VARCHAR
+            (20) DEFAULT 'proposed' CHECK
+            (status IN
+            ('proposed', 'confirmed', 'completed', 'cancelled'))
+);
+
+            CREATE TABLE calendar_snapshots
+            (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                previous_state_json JSONB NOT NULL,
+                created_at TIMESTAMP
+                WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     is_valid BOOLEAN DEFAULT TRUE
 );
 
-            CREATE TABLE activity_profiles
-            (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-                chronotype VARCHAR(20) CHECK (chronotype IN ('morning', 'afternoon', 'night')),
-                sleep_hours_goal INT DEFAULT 8,
-                sleep_start TIME,
-                sleep_end TIME
-            );
+                CREATE TABLE activity_profiles
+                (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                    chronotype VARCHAR(20) CHECK (chronotype IN ('morning', 'afternoon', 'night')),
+                    sleep_hours_goal INT DEFAULT 8,
+                    sleep_start TIME,
+                    sleep_end TIME
+                );
