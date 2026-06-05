@@ -19,7 +19,8 @@ export const useChatbot = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingProposal, setPendingProposal] = useState<any>(null);
+  const [pendingProposals, setPendingProposals] = useState<any[]>([]);
+  const [taskContext, setTaskContext] = useState<{name: string, duration: number, freq: number} | null>(null);
 
   // each time the messages state changes, we save the new state in localStorage to keep it updated. This way, the chat history is preserved across page reloads and browser sessions.
   useEffect(() => {
@@ -27,56 +28,70 @@ export const useChatbot = () => {
   }, [messages]);
 
 
-  // the function that handles the user input, sends it to the backend, and updates the chat with the AI response. It also handles the loading state to show a spinner or disable inputs while waiting for the response.
-
-  // function to handle the user input, send it to the backend, and update the chat with the AI response. It also handles the loading state to show a spinner or disable inputs while waiting for the response.
-  const handleSendMessage = async (taskName: string, duration: number, userId: string, chronotype: string) => {
-    if (!taskName.trim()) return;
-    // A) add the message of the user to the chat
-    const newUserMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: `Quiero agendar: ${taskName} (${duration} min)` };
+  // function to handle the user input, send it to the backend, and update the chat with the AI response.
+  const handleSendMessage = async (rawInput: string, userId: string, chronotype: string) => {
+    if (!rawInput.trim()) return;
+    
+    // A) add the raw message of the user to the chat
+    const newUserMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: rawInput };
     setMessages((prev) => [...prev, newUserMsg]);
     setIsLoading(true);
 
     try {
-      // B) prepare the data to send to the backend.
-      const requestData: ScheduleRequest = {
+
+        let finalPrompt = rawInput;
+      if (taskContext) {
+        finalPrompt = `CONTEXTO PREVIO: Tarea '${taskContext.name}' de ${taskContext.duration} min (${taskContext.freq} días/semana). \nMENSAJE NUEVO DEL USUARIO: "${rawInput}". \nINSTRUCCIÓN: Si el mensaje nuevo parece una modificación o preferencia de horario (ej. 'el viernes', 'por la tarde', 'más tiempo'), aplícalo al contexto previo. Si el mensaje nuevo es una petición de una tarea completamente distinta (ej. 'añade limpiar', 'quiero estudiar'), ignora el contexto previo por completo y procesa solo la tarea nueva.`;
+        
+        setTaskContext(null); // clear the memory for next time
+      }
+
+      // B) prepare the data to send to the backend (sending the raw prompt)
+      const requestData = {
         user_id: userId,
-        task_name: taskName,
-        duration_minutes: duration,
-        weekly_frequency: 1, // default 1
+        raw_prompt: rawInput,
         preferred_days: "Ninguno en particular",
-        chronotype: chronotype,
+        chronotype: chronotype || "medium",
       };
 
       // C) call the service that sends the request to the backend and waits for the response
       const token = localStorage.getItem('token');
-      const aiResponseJSON = await aiService.proposeSchedule(requestData, token || '');
-      const startTime = aiResponseJSON.start_time || aiResponseJSON.scheduled_at;
-      const endTime = aiResponseJSON.end_time || aiResponseJSON.scheduled_end;
-      const reason = aiResponseJSON.reason || "Este hueco se adapta perfectamente a tus preferencias.";
+      // we use "as any" because we changed the interface to send raw_prompt instead of task_name
+      const aiResponseJSON = await aiService.proposeSchedule(requestData as any, token || '');
+      
+      const sessions = aiResponseJSON.sessions || [];
+      const reason = aiResponseJSON.reason || "Este plan se adapta perfectamente a tus preferencias.";
+      
+      // Get the clean extracted data from the AI response
+      const cleanName = aiResponseJSON.task_name || rawInput;
+      const exactDuration = aiResponseJSON.duration_minutes || 60;
 
-      setPendingProposal({
+      // save the proposals in the state
+      const proposalsToSave = sessions.map((session: any) => ({
         user_id: userId,
-        name: taskName,
-        duration_minutes: duration,
-        weekly_frequency: 1,
+        name: cleanName,
+        duration_minutes: exactDuration,
+        weekly_frequency: aiResponseJSON.weekly_frequency || sessions.length || 1,
         energy_level: "medium",
-        scheduled_at: aiResponseJSON.start_time || aiResponseJSON.scheduled_at,
-        scheduled_end: aiResponseJSON.end_time || aiResponseJSON.scheduled_end,
-      });
+        scheduled_at: session.start_time,
+        scheduled_end: session.end_time,
+      }));
 
-      const startDate = new Date(startTime);
-      const endDate = new Date(endTime);
+      setPendingProposals(proposalsToSave);
 
-      const fechaTexto = startDate.toLocaleDateString('es-ES', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
+      // format the dates for the visual message
+      let sesionesTexto = "";
+      sessions.forEach((s: any, index: number) => {
+        const sd = new Date(s.start_time);
+        const ed = new Date(s.end_time);
+        const fecha = sd.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+        const inicio = sd.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        const fin = ed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        sesionesTexto += `\n 📅 ${index + 1}. ${fecha}: ${inicio} - ${fin}`;
       });
-      const fechaCapitalizada = fechaTexto.charAt(0).toUpperCase() + fechaTexto.slice(1);
-      const horaInicio = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      const horaFin = endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      const mensajeVisual = `He encontrado este hueco:\n\n ${fechaCapitalizada}\n ${horaInicio} - ${horaFin}\n\n ${reason}\n\n¿Te parece bien?`;
+      
+      // format the final message to show the extracted info to the user
+      const mensajeVisual = `He entendido que quieres "${cleanName}" (${exactDuration} min). He planificado ${sessions.length} sesión/es:\n${sesionesTexto}\n\n💡 ${reason}\n\n¿Te parece bien?`;
 
       // D) add the AI response to the chat (marking it as a proposal for displaying the buttons)
       const newAiMsg: ChatMessage = {
@@ -88,6 +103,7 @@ export const useChatbot = () => {
       setMessages((prev) => [...prev, newAiMsg]);
 
     } catch (error) {
+      console.error("Error in handleSendMessage:", error);
       const errorMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: 'Ups, ha ocurrido un error al consultar mi cerebro artificial.' };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
@@ -97,29 +113,31 @@ export const useChatbot = () => {
 
   // function for when the user clicks "YES".
   const handleAcceptProposal = async (onSuccess?: () => void) => {
-    if (!pendingProposal) return;
+    if (!pendingProposals || pendingProposals.length === 0) return;
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(pendingProposal)
-      });
+      
+      for (const proposal of pendingProposals) {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(proposal)
+        });
+        if (!response.ok) throw new Error('Error al guardar');
+      }
 
-      if (!response.ok) throw new Error('Error al guardar');
-
-      const confirmMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: '¡Genial! Tarea guardada correctamente en tu calendario.' };
+      const confirmMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: `¡Genial! Las ${pendingProposals.length} tareas se han guardado correctamente en tu calendario.` };
       setMessages((prev) => [...prev, confirmMsg]);
 
-      setPendingProposal(null);
+      setPendingProposals([]);
       if (onSuccess) onSuccess();
 
     } catch (error) {
-      const errorMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: 'Error al guardar la tarea en el calendario.' };
+      const errorMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: 'Error al guardar las tareas en el calendario.' };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
@@ -128,7 +146,17 @@ export const useChatbot = () => {
 
   // function for when the user clicks "NO"
   const handleRejectProposal = () => {
-    setPendingProposal(null);
+    // save the data for giving context to the conversation.
+    if (pendingProposals.length > 0) {
+      const firstProposal = pendingProposals[0];
+      setTaskContext({
+        name: firstProposal.name,
+        duration: firstProposal.duration_minutes,
+        freq: firstProposal.weekly_frequency
+      });
+    }
+
+    setPendingProposals([]);
     const rejectMsg: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: 'Vaya, buscaré otra alternativa. Dime si prefieres algún día en concreto.' };
     setMessages((prev) => [...prev, rejectMsg]);
   };
@@ -136,7 +164,7 @@ export const useChatbot = () => {
   // function to clear the chat history.
   const handleClearChat = () => {
     setMessages([]);
-    setPendingProposal(null);
+    setPendingProposals([]);
     localStorage.removeItem('chatbot_history');
   };
 

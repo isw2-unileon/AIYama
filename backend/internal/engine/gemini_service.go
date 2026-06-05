@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -11,30 +12,25 @@ import (
 
 // GenerateScheduleProposal generates a schedule proposal using the Gemini API based on the provided parameters.
 func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, preferredDays, chronotype, freeSlots string) (string, error) {
-	// create the context for the API call
 	ctx := context.Background()
 
-	// connect to the Gemini API using the provided API key
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return "", fmt.Errorf("error al crear el cliente de Gemini: %v", err)
 	}
-	defer client.Close() // close the client connection when done
+	defer client.Close()
 
-	// choose the Gemini model to use for generating the schedule proposal
 	model := client.GenerativeModel("gemini-3.5-flash")
 
-	// configure the system instruction (rules and guidelines for the model)
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{
-			genai.Text("Eres un experto en productividad y gestión del tiempo. Tu objetivo es buscar el mejor momento para realizar tareas basándote en el cronotipo del usuario y sus restricciones. Debes responder siempre y de forma estricta con un ÚNICO OBJETO JSON, sin texto adicional y usando horas exactas."),
+			genai.Text("Eres un experto en productividad. Debes proponer horarios basándote en los huecos libres. Responde SIEMPRE con un ÚNICO OBJETO JSON que contenga un array llamado 'sessions' con tantas sesiones como indique la frecuencia."),
 		},
 	}
 
-	// build the user prompt with the task details and user preferences
 	prompt := fmt.Sprintf(`
 		Necesita agendar la tarea "%s".
-		Duración de cada sesión: La que se indique en el promt de usuario. Por defecto se tendrá que asignar 1 hora.
+		Duración de cada sesión: %d minutos.
 		Veces que debe repetirse en la semana (frecuencia): %d.
 		Cronotipo del usuario: %s.
 		Días preferidos (si los hay): %s.
@@ -42,10 +38,8 @@ func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, 
 		Nuestro motor matemático ha filtrado el calendario y estos son los ÚNICOS huecos libres disponibles que cumplen las reglas:
 		%s
 
-		Analiza la información y elige el MEJOR hueco de la lista proporcionada para realizar la tarea, respetando su cronotipo.
+		Analiza la información y elige los %d MEJORES huecos distintos de la lista proporcionada. Si la frecuencia es mayor a los huecos disponibles, usa los que puedas.
 
-		IMPORTANTE: Devuelve SOLO y EXCLUSIVAMENTE un objeto JSON válido. No devuelvas un array. No incluyas texto antes ni después, ni uses bloques de código markdown (sin "json").
-		
 		Para construir las variables de fecha en formato ISO-8601 matemático ("YYYY-MM-DDTHH:MM:SSZ"), asume esta semana de referencia según el día que elijas:
 		- Lunes: 2026-06-01
 		- Martes: 2026-06-02
@@ -55,21 +49,23 @@ func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, 
 		- Sábado: 2026-06-06
 		- Domingo: 2026-06-07
 
-		Usa estrictamente esta estructura de llaves:
+		Usa ESTRICTAMENTE esta estructura JSON:
 		{
-			"start_time": "2026-06-03T16:00:00Z",
-			"end_time": "2026-06-03T16:50:00Z",
-			"reason": "Explicación breve de por qué es el mejor momento"
+			"reason": "Explicación breve de por qué has elegido este plan semanal",
+			"sessions": [
+				{
+					"start_time": "<INSERTA_FECHA_INICIO_ISO>",
+					"end_time": "<INSERTA_FECHA_FIN_ISO>"
+				}
+			]
 		}
-	`, taskName, duration, frequency, chronotype, preferredDays, freeSlots)
+	`, taskName, duration, frequency, chronotype, preferredDays, freeSlots, frequency)
 
-	// send the prompt to the Gemini model and get the response
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
 		return "", fmt.Errorf("error al contactar con la API de Gemini: %v", err)
 	}
 
-	// read the generated content from the response
 	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
 		responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
 		responseText = strings.TrimSpace(responseText)
@@ -81,4 +77,57 @@ func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, 
 	}
 
 	return "", fmt.Errorf("gemini no devolvió ninguna respuesta")
+}
+
+// ExtractedInfo saves the structured information extracted from the user's natural language input, including the task name, duration in minutes, and frequency per week.
+type ExtractedInfo struct {
+	Name            string `json:"name"`
+	DurationMinutes int    `json:"duration_minutes"`
+	Frequency       int    `json:"frequency"`
+}
+
+// ExtractTaskInfo analyzes the user's natural language input
+func ExtractTaskInfo(apiKey, userText string) (*ExtractedInfo, error) {
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-3.5-flash")
+	model.SystemInstruction = &genai.Content{
+		Parts: []genai.Part{
+			genai.Text("Eres un extractor de datos. Lee la frase del usuario y extrae el nombre de la tarea, su duración en minutos y cuántos días a la semana quiere hacerla. Si no especifica duración, asume 60. Si no especifica frecuencia, asume 1. Limpia el nombre (ej: de 'quiero estudiar 2h', el nombre es 'Estudiar'). Devuelve SOLO un JSON válido."),
+		},
+	}
+
+	prompt := fmt.Sprintf(`Frase del usuario: "%s"
+
+	Devuelve estrictamente este formato JSON:
+	{
+		"name": "Nombre de la tarea",
+		"duration_minutes": 60,
+		"frequency": 1
+	}`, userText)
+
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+		responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+		responseText = strings.TrimSpace(responseText)
+		responseText = strings.TrimPrefix(responseText, "```json")
+		responseText = strings.TrimPrefix(responseText, "```")
+		responseText = strings.TrimSuffix(responseText, "```")
+
+		var info ExtractedInfo
+		if err := json.Unmarshal([]byte(responseText), &info); err != nil {
+			return nil, fmt.Errorf("error al leer el JSON de Gemini: %v", err)
+		}
+		return &info, nil
+	}
+	return nil, fmt.Errorf("gemini no devolvió datos")
 }
