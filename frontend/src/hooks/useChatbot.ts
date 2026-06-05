@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { aiService, type ScheduleRequest } from '../services/ai.service';
+import { aiService } from '../services/ai.service';
 
 // structure of a chat message, which can be from the user or from the AI, and optionally can be a proposal that shows the buttons
 export interface ChatMessage {
@@ -49,7 +49,7 @@ export const useChatbot = () => {
       // B) prepare the data to send to the backend (sending the raw prompt)
       const requestData = {
         user_id: userId,
-        raw_prompt: rawInput,
+        raw_prompt: finalPrompt,
         preferred_days: "Ninguno en particular",
         chronotype: chronotype || "medium",
       };
