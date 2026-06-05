@@ -5,6 +5,7 @@ export interface CalendarEvent {
     startTime: string;
     endTime: string;
     isFixed: boolean;
+    date?: string;
     colorClass?: {
         bg: string;
         border: string;

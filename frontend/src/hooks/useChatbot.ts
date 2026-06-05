@@ -20,7 +20,7 @@ export const useChatbot = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [pendingProposals, setPendingProposals] = useState<any[]>([]);
-  const [taskContext, setTaskContext] = useState<{name: string, duration: number, freq: number} | null>(null);
+  const [taskContext, setTaskContext] = useState<{ name: string, duration: number, freq: number } | null>(null);
 
   // each time the messages state changes, we save the new state in localStorage to keep it updated. This way, the chat history is preserved across page reloads and browser sessions.
   useEffect(() => {
@@ -31,7 +31,16 @@ export const useChatbot = () => {
   // function to handle the user input, send it to the backend, and update the chat with the AI response.
   const handleSendMessage = async (rawInput: string, userId: string, chronotype: string) => {
     if (!rawInput.trim()) return;
-    
+    setMessages((prev) => prev.map(msg => ({ ...msg, isProposal: false })));
+    if (pendingProposals.length > 0) {
+      const firstProposal = pendingProposals[0];
+      setTaskContext({
+        name: firstProposal.name,
+        duration: firstProposal.duration_minutes,
+        freq: firstProposal.weekly_frequency
+      });
+      setPendingProposals([]);
+    }
     // A) add the raw message of the user to the chat
     const newUserMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: rawInput };
     setMessages((prev) => [...prev, newUserMsg]);
@@ -39,10 +48,10 @@ export const useChatbot = () => {
 
     try {
 
-        let finalPrompt = rawInput;
+      let finalPrompt = rawInput;
       if (taskContext) {
         finalPrompt = `CONTEXTO PREVIO: Tarea '${taskContext.name}' de ${taskContext.duration} min (${taskContext.freq} días/semana). \nMENSAJE NUEVO DEL USUARIO: "${rawInput}". \nINSTRUCCIÓN: Si el mensaje nuevo parece una modificación o preferencia de horario (ej. 'el viernes', 'por la tarde', 'más tiempo'), aplícalo al contexto previo. Si el mensaje nuevo es una petición de una tarea completamente distinta (ej. 'añade limpiar', 'quiero estudiar'), ignora el contexto previo por completo y procesa solo la tarea nueva.`;
-        
+
         setTaskContext(null); // clear the memory for next time
       }
 
@@ -58,10 +67,10 @@ export const useChatbot = () => {
       const token = localStorage.getItem('token');
       // we use "as any" because we changed the interface to send raw_prompt instead of task_name
       const aiResponseJSON = await aiService.proposeSchedule(requestData as any, token || '');
-      
+
       const sessions = aiResponseJSON.sessions || [];
       const reason = aiResponseJSON.reason || "Este plan se adapta perfectamente a tus preferencias.";
-      
+
       // Get the clean extracted data from the AI response
       const cleanName = aiResponseJSON.task_name || rawInput;
       const exactDuration = aiResponseJSON.duration_minutes || 60;
@@ -89,7 +98,7 @@ export const useChatbot = () => {
         const fin = ed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         sesionesTexto += `\n 📅 ${index + 1}. ${fecha}: ${inicio} - ${fin}`;
       });
-      
+
       // format the final message to show the extracted info to the user
       const mensajeVisual = `He entendido que quieres "${cleanName}" (${exactDuration} min). He planificado ${sessions.length} sesión/es:\n${sesionesTexto}\n\n💡 ${reason}\n\n¿Te parece bien?`;
 
@@ -113,11 +122,12 @@ export const useChatbot = () => {
 
   // function for when the user clicks "YES".
   const handleAcceptProposal = async (onSuccess?: () => void) => {
+    setMessages((prev) => prev.map(msg => ({ ...msg, isProposal: false })));
     if (!pendingProposals || pendingProposals.length === 0) return;
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      
+
       for (const proposal of pendingProposals) {
         const response = await fetch('/api/tasks', {
           method: 'POST',
@@ -146,6 +156,7 @@ export const useChatbot = () => {
 
   // function for when the user clicks "NO"
   const handleRejectProposal = () => {
+    setMessages((prev) => prev.map(msg => ({ ...msg, isProposal: false })));
     // save the data for giving context to the conversation.
     if (pendingProposals.length > 0) {
       const firstProposal = pendingProposals[0];

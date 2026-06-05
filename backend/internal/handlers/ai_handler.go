@@ -111,6 +111,7 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 		// 3. call Gemini again to generate a schedule proposal based on the extracted information and the free slots found in the calendar
 		responseJSON, err := engine.GenerateScheduleProposal(
 			cfg.GeminiAPIKey,
+			req.RawPrompt,
 			extracted.Name,
 			extracted.DurationMinutes,
 			extracted.Frequency,

@@ -19,6 +19,7 @@ func SetupFlexibleTaskRoutes(routes *gin.RouterGroup, db *sqlx.DB) {
 		tasks.GET("/:id", getTaskByIDHandler(db))
 		tasks.PUT("/:id", updateTaskHandler(db))
 		tasks.DELETE("/:id", deleteTaskHandler(db))
+		tasks.POST("/undo", undoActionHandler(db))
 	}
 }
 
@@ -101,6 +102,12 @@ func deleteTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		userID := c.MustGet("user_id").(string)
+
+		if err := repository.CreateSnapshot(c.Request.Context(), db, userID, "DELETE_TASK"); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "The snapshot couldnt be saved"})
+			return
+		}
+
 		if err := repository.DeleteFlexibleTask(c.Request.Context(), db, id, userID); err != nil {
 			if err.Error() == "task not found or unauthorized" {
 				c.JSON(http.StatusForbidden, gin.H{"error": "The task doesnt exists or its not yours"})
@@ -112,5 +119,18 @@ func deleteTaskHandler(db *sqlx.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
+	}
+}
+
+func undoActionHandler(db *sqlx.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.MustGet("user_id").(string)
+
+		if err := repository.UndoLastAction(c.Request.Context(), db, userID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "There are no actions or the process failed", "details": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Action undo correctly"})
 	}
 }

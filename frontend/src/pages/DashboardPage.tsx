@@ -63,6 +63,7 @@ export const DashboardPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [userId, setUserId] = useState<string>('');
     const [chronotype, setChronotype] = useState<string>('Intermediate');
+    const [showUndo, setShowUndo] = useState(false);
 
     const fetchCalendarData = useCallback(async () => {
         const token = localStorage.getItem('token');
@@ -113,7 +114,8 @@ export const DashboardPage: React.FC = () => {
                             startTime: startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
                             endTime: endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
                             isFixed: false,
-                            colorClass: randomColor
+                            colorClass: randomColor,
+                            date: startDate.toLocaleDateString('es-ES')
                         };
                     });
             }
@@ -130,6 +132,59 @@ export const DashboardPage: React.FC = () => {
     useEffect(() => {
         fetchCalendarData();
     }, [fetchCalendarData]);
+
+    const handleDeleteEvent = async (eventId: string) => {
+        if (!eventId.startsWith('task-')) return;
+
+        const realTaskId = eventId.replace('task-', '');
+
+        const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar esta tarea?');
+        if (!confirmDelete) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`/api/tasks/${realTaskId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                fetchCalendarData();
+                setShowUndo(true);
+            } else {
+                const data = await response.json();
+                alert(`No se pudo borrar la tarea: ${data.error || 'Error desconocido'}`);
+            }
+        } catch (error) {
+            console.error('Error al borrar la tarea:', error);
+            alert('Error de conexión al intentar borrar la tarea.');
+        }
+    };
+
+    const handleUndo = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/tasks/undo', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                setShowUndo(false);
+                fetchCalendarData();
+            } else {
+                alert("No se pudo deshacer la acción (es posible que haya expirado).");
+            }
+        } catch (error) {
+            console.error('Error deshaciendo:', error);
+        }
+    };
 
     if (isLoading && events.length === 0) {
         return (
@@ -167,7 +222,7 @@ export const DashboardPage: React.FC = () => {
                         </div>
                     </header>
 
-                    <WeeklyCalendar events={events} />
+                    <WeeklyCalendar events={events} onDeleteEvent={handleDeleteEvent} />
                 </div>
             </div>
 
@@ -176,7 +231,17 @@ export const DashboardPage: React.FC = () => {
                 chronotype={chronotype}
                 onTaskCreated={fetchCalendarData}
             />
-
+            {showUndo && (
+                <div className="fixed bottom-8 right-8 lg:right-[340px] bg-slate-900 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-4 z-[9999] transition-all duration-300 border border-slate-700">
+                    <span className="text-sm font-medium">Tarea eliminada</span>
+                    <button
+                        onClick={handleUndo}
+                        className="text-emerald-400 hover:text-emerald-300 font-bold text-sm px-3 py-1.5 rounded hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                        Deshacer
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
