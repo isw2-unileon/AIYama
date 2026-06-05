@@ -1,73 +1,59 @@
-# React + TypeScript + Vite
+# Alyama - Frontend Web Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## About the Project
+This directory contains the frontend web application for **Alyama**, an AI-driven dynamic and proactive scheduling system. Built as a Single Page Application (SPA), it provides the user interface for the AI chatbot, the interactive weekly calendar, and the biometric onboarding flow.
 
-Currently, two official plugins are available:
+Unlike traditional calendars, this interface allows users to interact with an AI assistant in natural language to find optimal time slots based on their energy levels (chronotypes) and daily constraints.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+The frontend is built with modern web technologies focused on performance and developer experience:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Core:** [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool:** [Vite](https://vitejs.dev/) (Fast Hot Module Replacement)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Routing:** React Router DOM
+- **Icons:** Lucide React / Heroicons
 
-## Expanding the ESLint configuration
+## Directory Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+├── assets/        # Static assets (images, icons)
+├── components/    # Reusable UI components (Buttons, Calendar blocks, Chat bubbles)
+├── hooks/         # Custom React hooks (e.g., useChatbot)
+├── pages/         # Main route pages (Login, Onboarding, Dashboard)
+├── services/      # API communication layer (Axios/Fetch calls to the Go backend)
+└── App.tsx        # Main application component
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Prerequisites
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Make sure you have installed:
+- [Node.js](https://nodejs.org/) (Version 22 or higher)
+- npm (comes with Node.js)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Getting Started
+
+1. **Install dependencies:**
+```bash
+   npm install
+   ```
+
+2. **Environment Setup:**
+   Ensure your backend (Go) is running. By default, Vite is configured to proxy API requests to `http://localhost:8080`. If you need specific environment variables, create a `.env` file in this directory.
+
+3. **Run the development server:**
+```bash
+   npm run dev
+   ```
+   The application will be available at [http://localhost:5173](http://localhost:5173).
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Starts the local development server with HMR. |
+| `npm run build` | Compiles the TypeScript code and builds the app for production. |
+| `npm run lint` | Runs ESLint to find and fix code quality issues. |
+| `npm run preview` | Boots up a local web server to serve the production build. |
