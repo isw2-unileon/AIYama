@@ -18,13 +18,14 @@ export const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ userId, chronotype, 
     } = useChatbot();
 
     const [input, setInput] = useState('');
-    const [duration, setDuration] = useState(30);
 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
 
-        handleSendMessage(input, duration, userId, chronotype);
+        // We only send the input text, userId and chronotype. 
+        // The AI will extract duration and frequency internally.
+        handleSendMessage(input, userId, chronotype);
         setInput('');
     };
 
@@ -82,31 +83,17 @@ export const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ userId, chronotype, 
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ej: Estudiar ISW2..."
+                    placeholder="Ej: Estudiar 2h, 3 días/semana..."
                     className="w-full p-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                     disabled={isLoading}
                 />
-                <div className="flex justify-between items-center gap-2">
-                    <div className="flex items-center gap-1">
-                        <input
-                            type="number"
-                            value={duration}
-                            onChange={(e) => setDuration(Number(e.target.value))}
-                            className="w-16 p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-                            min="5"
-                            step="5"
-                            disabled={isLoading}
-                        />
-                        <span className="text-xs text-gray-500 font-medium">min</span>
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={isLoading || !input.trim()}
-                        className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 disabled:opacity-50 transition-colors"
-                    >
-                        Enviar
-                    </button>
-                </div>
+                <button
+                    type="submit"
+                    disabled={isLoading || !input.trim()}
+                    className="w-full px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                >
+                    Enviar
+                </button>
             </form>
         </div>
     );

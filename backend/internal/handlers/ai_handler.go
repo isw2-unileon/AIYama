@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"aiyama-backend/internal/config"
 	"aiyama-backend/internal/engine"
@@ -18,9 +20,7 @@ import (
 // ProposalRequest represents the expected JSON payload for the /proposal endpoint.
 type ProposalRequest struct {
 	UserID        string `json:"user_id" binding:"required"`
-	TaskName      string `json:"task_name" binding:"required"`
-	Duration      int    `json:"duration_minutes" binding:"required"`
-	Frequency     int    `json:"weekly_frequency" binding:"required"`
+	RawPrompt     string `json:"raw_prompt" binding:"required"` // Recibe the entire natural language input from the user, e.g., "Quiero estudiar 2h los lunes y miércoles por la tarde"
 	PreferredDays string `json:"preferred_days"`
 	Chronotype    string `json:"chronotype" binding:"required"`
 }
@@ -42,7 +42,6 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req ProposalRequest
 
-		// receive and validate the request body
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos", "details": err.Error()})
 			return
@@ -50,7 +49,13 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 
 		ctx := context.Background()
 
-		// obtain data from the database needed for the Gemini prompt
+		// 1. call the Gemini model to extract the structured information from the user's natural language input
+		extracted, err := engine.ExtractTaskInfo(cfg.GeminiAPIKey, req.RawPrompt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Fallo al entender la frase", "details": err.Error()})
+			return
+		}
+
 		sleepStart, sleepEnd, err := repository.GetUserSleepTimes(ctx, db, req.UserID)
 		if err != nil {
 			sleepStart = "23:00"
@@ -62,18 +67,33 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 			fixedBlocks = []models.FixedBlock{}
 		}
 
-		// we only want the events that are proposed or confirmed, because the rejected ones are not relevant for the scheduling
 		scheduledEvents, err := repository.GetCalendarEventsByUserID(ctx, db, req.UserID)
 		if err != nil {
-			scheduledEvents = []engine.ScheduledEvent{} // if there's an error, we assume there are no events, which is safer than failing the whole proposal generation
+			scheduledEvents = []engine.ScheduledEvent{}
 		}
 
-		// calculate the free slots based on the retrieved data
+		// 2. use the duration extracted by Gemini to find the free slots in the user's calendar that fit that duration, taking into account the fixed blocks and sleep times
+		now := time.Now()
+
+		indiceHoy := int(now.Weekday())
+		horaActualStr := now.Format("15:04")
+
 		var realFreeSlots strings.Builder
 		for day := 0; day < 7; day++ {
-			slots := engine.FindFreeSlotsForDay(day, fixedBlocks, scheduledEvents, sleepStart, sleepEnd, req.Duration)
+			if day < indiceHoy {
+				continue
+			}
+			slots := engine.FindFreeSlotsForDay(day, fixedBlocks, scheduledEvents, sleepStart, sleepEnd, extracted.DurationMinutes)
 
 			for _, slot := range slots {
+				if day == indiceHoy {
+					if slot.EndTime <= horaActualStr {
+						continue
+					}
+					if slot.StartTime < horaActualStr {
+						slot.StartTime = horaActualStr
+					}
+				}
 				dayName := dayOfWeekToString(slot.DayOfWeek)
 				realFreeSlots.WriteString(fmt.Sprintf("- %s de %s a %s\n", dayName, slot.StartTime, slot.EndTime))
 			}
@@ -84,18 +104,16 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 			freeSlotsText = "No hay huecos disponibles que cumplan la duración."
 		}
 
-		//
-
 		if req.PreferredDays == "" {
 			req.PreferredDays = "Ninguno en particular"
 		}
 
-		// call the Gemini service to get a schedule proposal based on the request data and the mock free slots
+		// 3. call Gemini again to generate a schedule proposal based on the extracted information and the free slots found in the calendar
 		responseJSON, err := engine.GenerateScheduleProposal(
 			cfg.GeminiAPIKey,
-			req.TaskName,
-			req.Duration,
-			req.Frequency,
+			extracted.Name,
+			extracted.DurationMinutes,
+			extracted.Frequency,
 			req.PreferredDays,
 			req.Chronotype,
 			freeSlotsText,
@@ -105,7 +123,17 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		// return the Gemini response as JSON
-		c.Data(http.StatusOK, "application/json; charset=utf-8", []byte(responseJSON))
+		// 4. join the response from Gemini with the extracted information and return it to the frontend as a JSON
+		var geminiMap map[string]interface{}
+		if err := json.Unmarshal([]byte(responseJSON), &geminiMap); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Respuesta inválida", "details": err.Error()})
+			return
+		}
+
+		geminiMap["task_name"] = extracted.Name
+		geminiMap["duration_minutes"] = extracted.DurationMinutes
+		geminiMap["weekly_frequency"] = extracted.Frequency
+
+		c.JSON(http.StatusOK, geminiMap)
 	}
 }

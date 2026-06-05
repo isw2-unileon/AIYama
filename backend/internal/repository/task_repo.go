@@ -14,11 +14,14 @@ import (
 func GetCalendarEventsByUserID(ctx context.Context, db *sqlx.DB, userID string) ([]engine.ScheduledEvent, error) {
 	var events []engine.ScheduledEvent
 
-	// we only want the events that are proposed or confirmed, because the rejected ones are not relevant for the scheduling
+	// get scheduled flexible tasks to use as occupied blocks
 	query := `
-		SELECT title, start_time, end_time 
-		FROM calendar_events 
-		WHERE user_id = $1 AND status IN ('proposed', 'confirmed')
+		SELECT 
+			EXTRACT(DOW FROM scheduled_at) as day_of_week,
+			TO_CHAR(scheduled_at, 'HH24:MI') as start_time,
+			TO_CHAR(scheduled_end, 'HH24:MI') as end_time
+		FROM flexible_tasks 
+		WHERE user_id = $1 AND scheduled_at IS NOT NULL
 	`
 	err := db.SelectContext(ctx, &events, query, userID)
 	if err != nil {

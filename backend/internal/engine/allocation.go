@@ -17,8 +17,9 @@ type FreeSlot struct {
 
 // ScheduledEvent represents an event that has been scheduled (flexible).
 type ScheduledEvent struct {
-	StartTime string
-	EndTime   string
+	DayOfWeek int    `db:"day_of_week"`
+	StartTime string `db:"start_time"`
+	EndTime   string `db:"end_time"`
 }
 
 // TimeToMinutes converts a time string in "HH:MM" format to the total number of minutes since midnight. (Ej: "08:30" -> 510)
@@ -78,10 +79,13 @@ func FindFreeSlotsForDay(dayOfWeek int, fixedBlocks []models.FixedBlock, schedul
 
 	// Mark scheduled events as busy
 	for _, event := range scheduledEvents {
-		start := TimeToMinutes(event.StartTime)
-		end := TimeToMinutes(event.EndTime)
-		for i := start; i < end; i++ {
-			busyMinutes[i] = true
+		// only block the time if the event is on the same day of the week, otherwise we can have events that start one day and end another and eso no debería bloquear el día entero
+		if event.DayOfWeek == dayOfWeek {
+			start := TimeToMinutes(event.StartTime)
+			end := TimeToMinutes(event.EndTime)
+			for i := start; i < end; i++ {
+				busyMinutes[i] = true
+			}
 		}
 	}
 
