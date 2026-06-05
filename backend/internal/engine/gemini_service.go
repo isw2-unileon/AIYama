@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 )
 
 // GenerateScheduleProposal generates a schedule proposal using the Gemini API based on the provided parameters.
-func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, preferredDays, chronotype, freeSlots string) (string, error) {
+func GenerateScheduleProposal(apiKey, rawPrompt, taskName string, duration, frequency int, preferredDays, chronotype, freeSlots string) (string, error) {
 	ctx := context.Background()
 
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
@@ -28,38 +29,39 @@ func GenerateScheduleProposal(apiKey, taskName string, duration, frequency int, 
 		},
 	}
 
-	prompt := fmt.Sprintf(`
-		Necesita agendar la tarea "%s".
-		Duración de cada sesión: %d minutos.
-		Veces que debe repetirse en la semana (frecuencia): %d.
-		Cronotipo del usuario: %s.
-		Días preferidos (si los hay): %s.
+	now := time.Now()
+	todayStr := now.Format("2006-01-02 (Monday)")
 
-		Nuestro motor matemático ha filtrado el calendario y estos son los ÚNICOS huecos libres disponibles que cumplen las reglas:
+	prompt := fmt.Sprintf(`
+		ATENCIÓN - CONTEXTO TEMPORAL: Hoy es %s.
+
+		Mensaje original del usuario: "%s"
+
+		Información extraída:
+		- Tarea: "%s"
+		- Duración por sesión: %d minutos
+		- Cronotipo: %s
+
+		Huecos libres en el calendario:
 		%s
 
-		Analiza la información y elige los %d MEJORES huecos distintos de la lista proporcionada. Si la frecuencia es mayor a los huecos disponibles, usa los que puedas.
-
-		Para construir las variables de fecha en formato ISO-8601 matemático ("YYYY-MM-DDTHH:MM:SSZ"), asume esta semana de referencia según el día que elijas:
-		- Lunes: 2026-06-01
-		- Martes: 2026-06-02
-		- Miércoles: 2026-06-03
-		- Jueves: 2026-06-04
-		- Viernes: 2026-06-05
-		- Sábado: 2026-06-06
-		- Domingo: 2026-06-07
+		INSTRUCCIONES CLAVE:
+		1. Lee el mensaje original del usuario. Si menciona fechas específicas ("el mes que viene los dos primeros martes", "mañana", "en diciembre"), DEBES partir de la fecha de hoy y calcular matemáticamente qué días exactos son esos.
+		2. Si no menciona ninguna fecha, asume que es para los próximos días partiendo de hoy.
+		3. Ignora los huecos libres si el usuario pide explícitamente un día concreto que no está en la lista de huecos. Prioriza siempre lo que el usuario ha escrito en su mensaje original.
+		4. Devuelve el resultado en un JSON estricto. En el array "sessions" debes generar tantas sesiones como el usuario necesite (en tu ejemplo, 2 martes), usando fechas reales ISO-8601 (YYYY-MM-DDTHH:MM:SSZ).
 
 		Usa ESTRICTAMENTE esta estructura JSON:
 		{
-			"reason": "Explicación breve de por qué has elegido este plan semanal",
+			"reason": "Explicación de por qué elegiste estas fechas (ej: 'He programado la tarea para los dos primeros martes del mes que viene como pediste')",
 			"sessions": [
 				{
-					"start_time": "<INSERTA_FECHA_INICIO_ISO>",
-					"end_time": "<INSERTA_FECHA_FIN_ISO>"
+					"start_time": "<FECHA_REAL_CALCULADA>",
+					"end_time": "<FECHA_REAL_CALCULADA>"
 				}
 			]
 		}
-	`, taskName, duration, frequency, chronotype, preferredDays, freeSlots, frequency)
+	`, todayStr, rawPrompt, taskName, duration, chronotype, freeSlots)
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {

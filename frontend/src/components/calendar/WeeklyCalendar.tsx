@@ -3,6 +3,7 @@ import { type CalendarEvent } from '../../types/calendar.types';
 
 interface WeeklyCalendarProps {
     events: CalendarEvent[];
+    onDeleteEvent?: (eventId: string) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -20,7 +21,7 @@ const timeToMins = (time: string): number => {
     return h * 60 + (isNaN(m) ? 0 : m);
 };
 
-export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ events }) => {
+export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ events, onDeleteEvent }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const getStartOfWeek = (date: Date) => {
@@ -54,7 +55,16 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ events }) => {
     };
 
     const getLayoutForDay = (dayIndex: number) => {
-        const dayEvents = events.filter(e => e.dayOfWeek === dayIndex);
+        const targetDateObj = weekDays[dayIndex];
+        const targetDateString = targetDateObj.toLocaleDateString('es-ES');
+
+        const dayEvents = events.filter(e => {
+            if (e.isFixed) {
+                return e.dayOfWeek === dayIndex;
+            } else {
+                return e.date === targetDateString;
+            }
+        });
 
         const sorted = [...dayEvents].sort((a, b) => timeToMins(a.startTime) - timeToMins(b.startTime));
 
@@ -149,8 +159,23 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ events }) => {
                                                     left: `calc(${event.left} + 2px)`,
                                                 }}
                                             >
-                                                <div className={`absolute left-0 top-0 w-full min-h-full p-1.5 rounded-md border-l-4 shadow-sm transition-all duration-300
+                                                <div className={`absolute left-0 top-0 w-full min-h-full p-1.5 pr-6 rounded-md border-l-4 shadow-sm transition-all duration-300
                                                     group-hover:!w-[250px] group-hover:!h-auto group-hover:z-[9999] group-hover:shadow-2xl group-hover:cursor-pointer ${colorStyle}`}>
+
+                                                    {!event.isFixed && onDeleteEvent && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onDeleteEvent(event.id);
+                                                            }}
+                                                            className="absolute top-1 right-1 p-1 text-red-600 bg-white/50 hover:bg-red-100 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50"
+                                                            title="Borrar tarea"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
 
                                                     <div className="text-xs font-bold leading-tight truncate group-hover:whitespace-normal">
                                                         {event.title}

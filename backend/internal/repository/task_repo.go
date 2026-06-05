@@ -114,3 +114,60 @@ func DeleteFlexibleTask(ctx context.Context, db *sqlx.DB, id string, userID stri
 
 	return nil
 }
+
+// SNAPSHOT FUNCTIONS
+func CreateSnapshot(ctx context.Context, db *sqlx.DB, userID string, actionType string) error {
+	query := `
+		INSERT INTO calendar_snapshots (user_id, action_type, snapshot_data)
+		VALUES ($1, $2, (
+			-- Convertimos todas las filas de tareas del usuario a un array JSON
+			SELECT COALESCE(json_agg(row_to_json(t)), '[]')::jsonb
+			FROM flexible_tasks t
+			WHERE user_id = $1
+		))
+	`
+	_, err := db.ExecContext(ctx, query, userID, actionType)
+	return err
+}
+
+func UndoLastAction(ctx context.Context, db *sqlx.DB, userID string) error {
+	tx, err := db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var snapID string
+	var snapData []byte
+	err = tx.QueryRowxContext(ctx, `
+		SELECT id, snapshot_data 
+		FROM calendar_snapshots 
+		WHERE user_id = $1 
+		ORDER BY created_at DESC LIMIT 1
+	`, userID).Scan(&snapID, &snapData)
+	if err != nil {
+		return errors.New("no hay acciones para deshacer")
+	}
+
+	_, err = tx.ExecContext(ctx, `DELETE FROM flexible_tasks WHERE user_id = $1`, userID)
+	if err != nil {
+		return err
+	}
+
+	insertQuery := `
+		INSERT INTO flexible_tasks (id, user_id, name, duration_minutes, weekly_frequency, energy_level, scheduled_at, scheduled_end)
+		SELECT id, user_id, name, duration_minutes, weekly_frequency, energy_level, scheduled_at, scheduled_end
+		FROM json_populate_recordset(null::flexible_tasks, $1::json)
+	`
+	_, err = tx.ExecContext(ctx, insertQuery, snapData)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `DELETE FROM calendar_snapshots WHERE id = $1`, snapID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
