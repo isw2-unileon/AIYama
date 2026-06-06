@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { WeeklyCalendar } from '../components/calendar/WeeklyCalendar';
 import { type CalendarEvent } from '../types/calendar.types';
 import { ChatbotPanel } from '../components/chatbot/ChatbotPanel';
+import { supabase } from '../lib/supabase';
 
 const formatTimeRobust = (timeStr: string) => {
     if (!timeStr) return "00:00";
@@ -27,6 +28,7 @@ const colorPalettes = [
     { bg: 'bg-lime-100', border: 'border-lime-500', text: 'text-lime-800' },
     { bg: 'bg-rose-100', border: 'border-rose-500', text: 'text-rose-800' }
 ];
+
 const getPersistentColor = (id: string) => {
     if (!id) return colorPalettes[0];
     let hash = 0;
@@ -50,7 +52,6 @@ const getUserIdFromToken = (token: string | null): string => {
         );
         return JSON.parse(jsonPayload).user_id || JSON.parse(jsonPayload).sub || '';
     } catch (e) {
-        console.error("Error decodificando el token", e);
         return '';
     }
 };
@@ -64,6 +65,34 @@ export const DashboardPage: React.FC = () => {
     const [userId, setUserId] = useState<string>('');
     const [chronotype, setChronotype] = useState<string>('Intermediate');
     const [showUndo, setShowUndo] = useState(false);
+
+    const handleLogout = async () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                // CORRECCIÓN: Usar la ruta relativa para aprovechar el proxy de Vite
+                await fetch('/api/calendar/snapshots', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error(error);
+        }
+
+        localStorage.removeItem('token');
+        navigate('/login');
+    };
+
+    const handleEditPreferences = () => {
+        navigate('/onboarding');
+    };
 
     const fetchCalendarData = useCallback(async () => {
         const token = localStorage.getItem('token');
@@ -111,11 +140,11 @@ export const DashboardPage: React.FC = () => {
                             id: `task-${task.id}`,
                             title: task.title || task.name,
                             dayOfWeek: dayOfWeek,
-                            startTime: startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                            endTime: endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                            startTime: startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                            endTime: endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
                             isFixed: false,
                             colorClass: randomColor,
-                            date: startDate.toLocaleDateString('es-ES')
+                            date: startDate.toLocaleDateString('en-US')
                         };
                     });
             }
@@ -123,7 +152,7 @@ export const DashboardPage: React.FC = () => {
             setEvents([...fixedEvents, ...flexibleEvents]);
             setError(null);
         } catch (err: any) {
-            setError("Error de conexión con el servidor.");
+            setError("Server connection error.");
         } finally {
             setIsLoading(false);
         }
@@ -138,7 +167,7 @@ export const DashboardPage: React.FC = () => {
 
         const realTaskId = eventId.replace('task-', '');
 
-        const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar esta tarea?');
+        const confirmDelete = window.confirm('Are you sure you want to delete this task?');
         if (!confirmDelete) return;
 
         const token = localStorage.getItem('token');
@@ -157,11 +186,10 @@ export const DashboardPage: React.FC = () => {
                 setShowUndo(true);
             } else {
                 const data = await response.json();
-                alert(`No se pudo borrar la tarea: ${data.error || 'Error desconocido'}`);
+                alert(`Could not delete task: ${data.error || 'Unknown error'}`);
             }
         } catch (error) {
-            console.error('Error al borrar la tarea:', error);
-            alert('Error de conexión al intentar borrar la tarea.');
+            alert('Connection error while trying to delete the task.');
         }
     };
 
@@ -179,17 +207,15 @@ export const DashboardPage: React.FC = () => {
                 setShowUndo(false);
                 fetchCalendarData();
             } else {
-                alert("No se pudo deshacer la acción (es posible que haya expirado).");
+                alert("Could not undo action (it may have expired).");
             }
-        } catch (error) {
-            console.error('Error deshaciendo:', error);
-        }
+        } catch (error) { }
     };
 
     if (isLoading && events.length === 0) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-xl font-semibold text-gray-600 animate-pulse">Cargando tu horario...</div>
+                <div className="text-xl font-semibold text-gray-600 animate-pulse">Loading your schedule...</div>
             </div>
         );
     }
@@ -200,8 +226,8 @@ export const DashboardPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                     <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                         <div>
-                            <h1 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm tracking-tight pb-1">Mi Calendario Semanal</h1>
-                            <p className="text-gray-500 mt-2">Horario sincronizado con la base de datos</p>
+                            <h1 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm tracking-tight pb-1">My Weekly Calendar</h1>
+                            <p className="text-gray-500 mt-2">Schedule synchronized with database</p>
                         </div>
 
                         {error && (
@@ -210,15 +236,29 @@ export const DashboardPage: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="flex gap-6 bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 bg-slate-100 border-l-4 border-slate-400 rounded"></div>
-                                <span className="text-sm font-medium text-gray-700">Bloques Fijos</span>
+                        <div className="flex items-center gap-4">
+                            <div className="flex gap-6 bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-slate-100 border-l-4 border-slate-400 rounded"></div>
+                                    <span className="text-sm font-medium text-gray-700">Fixed Blocks</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-emerald-100 border-l-4 border-emerald-500 rounded"></div>
+                                    <span className="text-sm font-medium text-gray-700">Smart Tasks</span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 bg-emerald-100 border-l-4 border-emerald-500 rounded"></div>
-                                <span className="text-sm font-medium text-gray-700">Tareas Inteligentes</span>
-                            </div>
+                            <button
+                                onClick={handleEditPreferences}
+                                className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors"
+                            >
+                                Edit Preferences
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors"
+                            >
+                                Log out
+                            </button>
                         </div>
                     </header>
 
@@ -233,12 +273,12 @@ export const DashboardPage: React.FC = () => {
             />
             {showUndo && (
                 <div className="fixed bottom-8 right-8 lg:right-[340px] bg-slate-900 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-4 z-[9999] transition-all duration-300 border border-slate-700">
-                    <span className="text-sm font-medium">Tarea eliminada</span>
+                    <span className="text-sm font-medium">Task deleted</span>
                     <button
                         onClick={handleUndo}
                         className="text-emerald-400 hover:text-emerald-300 font-bold text-sm px-3 py-1.5 rounded hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
-                        Deshacer
+                        Undo
                     </button>
                 </div>
             )}

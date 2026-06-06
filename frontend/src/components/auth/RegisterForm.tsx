@@ -14,7 +14,6 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
         password: '',
         confirmPassword: '',
     });
-
     const [validationError, setValidationError] = useState<string | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,12 +29,10 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
             setValidationError('Please enter a valid email address.');
             return;
         }
-
         if (formData.password.length < 8) {
             setValidationError('Password must be at least 8 characters.');
             return;
         }
-
         if (formData.password !== formData.confirmPassword) {
             setValidationError('Passwords do not match.');
             return;
@@ -45,7 +42,7 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
     };
 
     return (
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
             <div className="form-group">
                 <label htmlFor="username">Username</label>
                 <input
@@ -56,9 +53,9 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
                     onChange={handleChange}
                     placeholder="yourname"
                     required
+                    autoComplete="off"
                 />
             </div>
-
             <div className="form-group">
                 <label htmlFor="email">Email</label>
                 <input
@@ -69,9 +66,9 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
                     onChange={handleChange}
                     placeholder="tu@email.com"
                     required
+                    autoComplete="off"
                 />
             </div>
-
             <div className="form-group">
                 <label htmlFor="password">Password</label>
                 <input
@@ -82,9 +79,9 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
                     onChange={handleChange}
                     placeholder="••••••••"
                     required
+                    autoComplete="new-password"
                 />
             </div>
-
             <div className="form-group">
                 <label htmlFor="confirmPassword">Confirm password</label>
                 <input
@@ -95,12 +92,11 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
                     onChange={handleChange}
                     placeholder="••••••••"
                     required
+                    autoComplete="new-password"
                 />
             </div>
-
             {validationError && <p className="error-message">{validationError}</p>}
             {error && <p className="error-message">{error}</p>}
-
             <button type="submit" disabled={isLoading}>
                 {isLoading ? 'Creating account...' : 'Create account'}
             </button>

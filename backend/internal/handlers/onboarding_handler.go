@@ -25,7 +25,14 @@ func createOnBoardingHandler(db *sqlx.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data: " + err.Error()})
 			return
 		}
-		err := repository.SaveOnboarding(c.Request.Context(), db, payload)
+
+		userID := c.MustGet("user_id").(string)
+		_, err := db.Exec("DELETE FROM fixed_blocks WHERE user_id = $1", userID)
+		if err != nil {
+			slog.Warn("No previous blocks deleted or error occurred", "detail", err.Error())
+		}
+
+		err = repository.SaveOnboarding(c.Request.Context(), db, payload)
 		if err != nil {
 			slog.Error("Critical error", "detail", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save onboarding data", "details": err.Error()})

@@ -17,8 +17,12 @@ export const RegisterPage = () => {
             const response = await registerUser(data);
             if (response.error) {
                 setError(response.error);
+                setIsLoading(false);
                 return;
             }
+
+            localStorage.setItem(`needsOnboarding_${data.email}`, 'true');
+
             setSuccess(true);
             setTimeout(() => navigate('/login'), 2000);
         } catch {
@@ -31,9 +35,9 @@ export const RegisterPage = () => {
     return (
         <div className="auth-page">
             <div className="auth-card">
+                <img src="/favicon.svg" alt="AIyama Logo" className="auth-logo" />
                 <h1>Create account</h1>
                 <p>Start optimizing your time with AIyama</p>
-
                 {success ? (
                     <p className="success-message">
                         Account created successfully! Redirecting to login...

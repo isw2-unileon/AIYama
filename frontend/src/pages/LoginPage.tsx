@@ -16,15 +16,23 @@ export const LoginPage = () => {
             const response = await loginUser(data);
             if (response.error) {
                 setError(response.error);
+                setIsLoading(false);
                 return;
             }
             if (response.token) {
                 localStorage.setItem('token', response.token);
+
+                const needsOnboarding = localStorage.getItem(`needsOnboarding_${data.email}`);
+
+                if (needsOnboarding === 'true') {
+                    localStorage.removeItem(`needsOnboarding_${data.email}`);
+                    navigate('/onboarding');
+                } else {
+                    navigate('/dashboard');
+                }
             }
-            navigate('/onboarding');
         } catch {
             setError('Something went wrong. Please try again.');
-        } finally {
             setIsLoading(false);
         }
     };
@@ -32,6 +40,7 @@ export const LoginPage = () => {
     return (
         <div className="auth-page">
             <div className="auth-card">
+                <img src="/favicon.svg" alt="AIyama Logo" className="auth-logo" />
                 <h1>Welcome back</h1>
                 <p>Log in to your AIyama account</p>
                 <LoginForm onSubmit={handleLogin} isLoading={isLoading} error={error} />
