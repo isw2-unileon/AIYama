@@ -26,15 +26,15 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
-            setValidationError('Please enter a valid email address.');
+            setValidationError('Por favor, introduce un correo electrónico válido.');
             return;
         }
         if (formData.password.length < 8) {
-            setValidationError('Password must be at least 8 characters.');
+            setValidationError('La contraseña debe tener al menos 8 caracteres.');
             return;
         }
         if (formData.password !== formData.confirmPassword) {
-            setValidationError('Passwords do not match.');
+            setValidationError('Las contraseñas no coinciden.');
             return;
         }
 
@@ -44,20 +44,20 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
     return (
         <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
             <div className="form-group">
-                <label htmlFor="username">Username</label>
+                <label htmlFor="username">Nombre de usuario</label>
                 <input
                     id="username"
                     name="username"
                     type="text"
                     value={formData.username}
                     onChange={handleChange}
-                    placeholder="yourname"
+                    placeholder="tunombre"
                     required
                     autoComplete="off"
                 />
             </div>
             <div className="form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">Correo electrónico</label>
                 <input
                     id="email"
                     name="email"
@@ -70,7 +70,7 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
                 />
             </div>
             <div className="form-group">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">Contraseña</label>
                 <input
                     id="password"
                     name="password"
@@ -83,7 +83,7 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
                 />
             </div>
             <div className="form-group">
-                <label htmlFor="confirmPassword">Confirm password</label>
+                <label htmlFor="confirmPassword">Confirmar contraseña</label>
                 <input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -98,7 +98,7 @@ export const RegisterForm = ({ onSubmit, isLoading, error }: RegisterFormProps) 
             {validationError && <p className="error-message">{validationError}</p>}
             {error && <p className="error-message">{error}</p>}
             <button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Create account'}
+                {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
             </button>
         </form>
     );

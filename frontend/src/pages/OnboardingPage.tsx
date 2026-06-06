@@ -27,14 +27,14 @@ const formatTimeRobust = (timeStr: string) => {
 };
 
 const daysOfWeek = [
-    { value: 0, label: 'Everyday' }, // Añadida opción todos los días
-    { value: 1, label: 'Mon' },
-    { value: 2, label: 'Tue' },
-    { value: 3, label: 'Wed' },
-    { value: 4, label: 'Thu' },
-    { value: 5, label: 'Fri' },
-    { value: 6, label: 'Sat' },
-    { value: 7, label: 'Sun' }
+    { value: 0, label: 'Todos los días' },
+    { value: 1, label: 'Lun' },
+    { value: 2, label: 'Mar' },
+    { value: 3, label: 'Mié' },
+    { value: 4, label: 'Jue' },
+    { value: 5, label: 'Vie' },
+    { value: 6, label: 'Sáb' },
+    { value: 7, label: 'Dom' }
 ];
 
 export const OnboardingPage = () => {
@@ -43,7 +43,7 @@ export const OnboardingPage = () => {
 
     const [formData, setFormData] = useState<OnboardingData>({
         chronotype: '',
-        sleepHoursGoal: 8, // Lo mantenemos en 8 por defecto ya que lo hemos quitado de la UI
+        sleepHoursGoal: 8, // keeping it at 8 by default since we removed it from the UI
         sleepStart: '23:00', // by default
         sleepEnd: '07:00', // by default
         fixedBlocks: [],
@@ -52,7 +52,7 @@ export const OnboardingPage = () => {
     // --- TEMPORARY STATE TO ADD A BLOCK ---
     const [currentBlock, setCurrentBlock] = useState<FixedBlock>({
         name: '',
-        dayOfWeek: 0, // Everyday por defecto
+        dayOfWeek: 0, // Everyday by default
         startTime: '',
         endTime: '',
     });
@@ -76,7 +76,7 @@ export const OnboardingPage = () => {
                                 startTime: formatTimeRobust(block.start_time),
                                 endTime: formatTimeRobust(block.end_time)
                             }))
-                            .filter((block: any) => block.name !== 'Sleep'); // Ocultamos los bloques de sueño de la lista visual
+                            .filter((block: any) => block.name !== 'Sleep'); // hide sleep blocks from the visual list
 
                         const uniqueBlocks = rawBlocks.filter((block: any, index: number, self: any[]) =>
                             index === self.findIndex((b) => (
@@ -119,14 +119,14 @@ export const OnboardingPage = () => {
             const token = localStorage.getItem('token');
 
             if (!token) {
-                alert("User not found. Please log in again.");
+                alert("Usuario no encontrado. Por favor, inicia sesión de nuevo.");
                 navigate('/login');
                 return;
             }
 
             const expandedBlocks: any[] = [];
 
-            // 1. AUTO-GENERAR HORAS DE SUEÑO PARA EL CALENDARIO (Lunes a Domingo)
+            // 1. AUTO-GENERATE SLEEP HOURS FOR THE CALENDAR (Monday to Sunday)
             for (let d = 1; d <= 7; d++) {
                 expandedBlocks.push({
                     name: 'Sleep',
@@ -136,7 +136,7 @@ export const OnboardingPage = () => {
                 });
             }
 
-            // 2. EXPANDIR BLOQUES DEL USUARIO (Si marca Everyday, se multiplica por 7)
+            // 2. EXPAND USER BLOCKS (if Everyday is selected, it is multiplied by 7)
             formData.fixedBlocks.forEach(block => {
                 if (Number(block.dayOfWeek) === 0) {
                     for (let d = 1; d <= 7; d++) {
@@ -160,13 +160,13 @@ export const OnboardingPage = () => {
             // here we prepare the data to send to the backend, we can do some transformations if needed
             const payload = {
                 chronotype: formData.chronotype,
-                sleep_hours_goal: 8, // Se manda fijo porque lo quitamos de la encuesta
+                sleep_hours_goal: 8, // sent as fixed since we removed it from the survey
                 sleep_start: formData.sleepStart,
                 sleep_end: formData.sleepEnd,
                 fixed_blocks: expandedBlocks
             };
 
-            // we send it to the window of backend (which will be listened by the main process and then forwarded to the real backend)
+            // we send it to the backend API
             const response = await fetch('/api/onboarding', {
                 method: 'POST',
                 headers: {
@@ -179,15 +179,15 @@ export const OnboardingPage = () => {
             // we check if the response is ok
             if (response.ok) {
                 console.log("Response status:", response.status);
-                navigate('/dashboard'); // we navigate to the dashboard or main page of the app after successful onboarding
+                navigate('/dashboard'); // navigate to the dashboard after successful onboarding
             } else {
                 const errorData = await response.json();
                 console.error("Error response from backend:", errorData);
-                alert("There was an error saving your configuration. Please try again.");
+                alert("Ha ocurrido un error al guardar tu configuración. Por favor, inténtalo de nuevo.");
             }
         } catch (error) {
             console.error("Error during onboarding submission:", error);
-            alert("Could not connect to the server.");
+            alert("No se pudo conectar con el servidor.");
             return;
         }
     };
@@ -200,7 +200,7 @@ export const OnboardingPage = () => {
     const handleAddBlock = (e: React.FormEvent) => {
         e.preventDefault(); // avoids page reload
 
-        // Evitar que el usuario pulse el botón dos veces y meta exactamente el mismo bloque visualmente
+        // avoid the user pressing the button twice and adding the exact same block visually
         const isDuplicate = formData.fixedBlocks.some(b =>
             b.name === currentBlock.name &&
             Number(b.dayOfWeek) === Number(currentBlock.dayOfWeek) &&
@@ -209,19 +209,19 @@ export const OnboardingPage = () => {
         );
 
         if (!isDuplicate) {
-            // We save the block in the big list
+            // save the block in the main list
             setFormData({
                 ...formData,
                 fixedBlocks: [...formData.fixedBlocks, currentBlock]
             });
         }
 
-        // We clear the temporary form to be able to add another new block
+        // clear the temporary form to be able to add another new block
         setCurrentBlock({ name: '', dayOfWeek: 0, startTime: '', endTime: '' });
     };
 
     const handleRemoveBlock = (indexToRemove: number) => {
-        // We filter the list to remove the block on which the user clicked
+        // filter the list to remove the block the user clicked on
         setFormData({
             ...formData,
             fixedBlocks: formData.fixedBlocks.filter((_, index) => index !== indexToRemove)
@@ -231,13 +231,13 @@ export const OnboardingPage = () => {
     return (
         <div className="auth-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '20px' }}>
             <div className="auth-card" style={{ maxWidth: '500px', width: '100%', textAlign: 'center', margin: '0 auto' }}>
-                <h1>Configure AIyama</h1>
-                <p style={{ marginBottom: '30px' }}>Step {step} of 2: Activity Profile</p>
+                <h1>Configurar AIyama</h1>
+                <p style={{ marginBottom: '30px' }}>Paso {step} de 2: Perfil de actividad</p>
 
                 {step === 1 && (
                     <form onSubmit={handleNextStep} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
                         <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label htmlFor="chronotype" style={{ fontWeight: '500' }}>When do you perform best? (Chronotype)</label>
+                            <label htmlFor="chronotype" style={{ fontWeight: '500' }}>¿Cuándo rindes mejor? (Cronotipo)</label>
                             <select
                                 id="chronotype"
                                 name="chronotype"
@@ -246,17 +246,15 @@ export const OnboardingPage = () => {
                                 required
                                 style={{ padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--code-bg)', color: 'var(--text-h)', width: '100%', boxSizing: 'border-box' }}
                             >
-                                <option value="" disabled>Select an option</option>
-                                <option value="morning">Morning (Lark)</option>
-                                <option value="afternoon">Afternoon (Hummingbird)</option>
-                                <option value="night">Night (Owl)</option>
+                                <option value="" disabled>Selecciona una opción</option>
+                                <option value="morning">Mañana (Alondra)</option>
+                                <option value="afternoon">Tarde (Colibrí)</option>
+                                <option value="night">Noche (Búho)</option>
                             </select>
                         </div>
 
-                        {/* SE ELIMINÓ EL OBJETIVO DE HORAS DE SUEÑO AQUÍ COMO PEDISTE */}
-
                         <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label htmlFor="sleepStart" style={{ fontWeight: '500' }}>Bedtime</label>
+                            <label htmlFor="sleepStart" style={{ fontWeight: '500' }}>Hora de acostarse</label>
                             <input
                                 id="sleepStart"
                                 name="sleepStart"
@@ -269,7 +267,7 @@ export const OnboardingPage = () => {
                         </div>
 
                         <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label htmlFor="sleepEnd" style={{ fontWeight: '500' }}>Wake up time</label>
+                            <label htmlFor="sleepEnd" style={{ fontWeight: '500' }}>Hora de levantarse</label>
                             <input
                                 id="sleepEnd"
                                 name="sleepEnd"
@@ -282,53 +280,53 @@ export const OnboardingPage = () => {
                         </div>
 
                         <button type="submit" style={{ marginTop: '10px', padding: '12px', width: '100%', fontWeight: 'bold' }}>
-                            Next: Fixed Schedules
+                            Siguiente: Horarios Fijos
                         </button>
                     </form>
                 )}
 
                 {step === 2 && (
                     <div style={{ textAlign: 'center' }}>
-                        <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>Fixed Schedules</h2>
-                        <p style={{ marginBottom: '20px', color: 'var(--text)' }}>Add your classes, work, or fixed commitments.</p>
+                        <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>Horarios Fijos</h2>
+                        <p style={{ marginBottom: '20px', color: 'var(--text)' }}>Añade tus clases, trabajo u otros compromisos fijos.</p>
 
                         {/* FORM TO ADD A BLOCK */}
                         <form onSubmit={handleAddBlock} className="auth-form" style={{ padding: '20px', background: 'var(--code-bg)', borderRadius: '8px', marginBottom: '20px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '14px' }}>Name (e.g., University)</label>
+                                    <label style={{ fontSize: '14px' }}>Nombre (ej. Universidad)</label>
                                     <input name="name" type="text" value={currentBlock.name} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)' }} />
                                 </div>
                                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '14px' }}>Day of the week</label>
+                                    <label style={{ fontSize: '14px' }}>Día de la semana</label>
                                     <select name="dayOfWeek" value={currentBlock.dayOfWeek} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)', width: '100%' }}>
-                                        <option value="0">Everyday</option>
-                                        <option value="1">Mon</option>
-                                        <option value="2">Tue</option>
-                                        <option value="3">Wed</option>
-                                        <option value="4">Thu</option>
-                                        <option value="5">Fri</option>
-                                        <option value="6">Sat</option>
-                                        <option value="7">Sun</option>
+                                        <option value="0">Todos los días</option>
+                                        <option value="1">Lun</option>
+                                        <option value="2">Mar</option>
+                                        <option value="3">Mié</option>
+                                        <option value="4">Jue</option>
+                                        <option value="5">Vie</option>
+                                        <option value="6">Sáb</option>
+                                        <option value="7">Dom</option>
                                     </select>
                                 </div>
                                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '14px' }}>Start Time</label>
+                                    <label style={{ fontSize: '14px' }}>Hora de inicio</label>
                                     <input name="startTime" type="time" value={currentBlock.startTime} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)' }} />
                                 </div>
                                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '14px' }}>End Time</label>
+                                    <label style={{ fontSize: '14px' }}>Hora de fin</label>
                                     <input name="endTime" type="time" value={currentBlock.endTime} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)' }} />
                                 </div>
                             </div>
-                            <button type="submit" style={{ background: 'var(--text-h)', color: 'var(--bg)', marginTop: '5px', padding: '10px', fontWeight: 'bold' }}>+ Add block</button>
+                            <button type="submit" style={{ background: 'var(--text-h)', color: 'var(--bg)', marginTop: '5px', padding: '10px', fontWeight: 'bold' }}>+ Añadir bloque</button>
                         </form>
 
                         {/* LIST OF ADDED BLOCKS */}
                         <div style={{ textAlign: 'left', marginBottom: '25px' }}>
-                            <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>Your saved schedules:</h3>
+                            <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>Tus horarios guardados:</h3>
                             {formData.fixedBlocks.length === 0 ? (
-                                <p style={{ color: 'var(--text)', fontSize: '14px' }}>You haven't added any blocks yet.</p>
+                                <p style={{ color: 'var(--text)', fontSize: '14px' }}>Aún no has añadido ningún bloque.</p>
                             ) : (
                                 <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {formData.fixedBlocks.map((block, index) => {
@@ -347,10 +345,10 @@ export const OnboardingPage = () => {
                         {/* FINAL BUTTONS */}
                         <div style={{ display: 'flex', gap: '15px' }}>
                             <button onClick={() => setStep(1)} style={{ background: 'transparent', border: '2px solid var(--accent)', color: 'var(--accent)', borderRadius: '8px', padding: '12px', flex: 1, fontWeight: 'bold' }}>
-                                Go back
+                                Volver
                             </button>
                             <button onClick={handleFinalSubmit} style={{ background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', flex: 2, padding: '12px', fontWeight: 'bold' }}>
-                                Finish Onboarding
+                                Finalizar configuración
                             </button>
                         </div>
                     </div>

@@ -19,26 +19,17 @@ func SetupOnboardingRoutes(router *gin.RouterGroup, db *sqlx.DB) {
 func createOnBoardingHandler(db *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var payload models.OnboardingPayload
-
 		if err := c.ShouldBindJSON(&payload); err != nil {
-			slog.Error("Critical error", "detail", err.Error())
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data: " + err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-
-		userID := c.MustGet("user_id").(string)
-		_, err := db.Exec("DELETE FROM fixed_blocks WHERE user_id = $1", userID)
+		err := repository.SaveOnboarding(c.Request.Context(), db, payload)
 		if err != nil {
-			slog.Warn("No previous blocks deleted or error occurred", "detail", err.Error())
-		}
-
-		err = repository.SaveOnboarding(c.Request.Context(), db, payload)
-		if err != nil {
-			slog.Error("Critical error", "detail", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save onboarding data", "details": err.Error()})
+			slog.Error("Error guardando onboarding", "detail", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
 			return
 		}
-		c.JSON(http.StatusCreated, gin.H{"message": "Onboarding completed successfully"})
+		c.JSON(http.StatusCreated, gin.H{"message": "Success"})
 	}
 }
 

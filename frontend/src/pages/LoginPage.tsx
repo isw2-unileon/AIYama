@@ -32,7 +32,7 @@ export const LoginPage = () => {
                 }
             }
         } catch {
-            setError('Something went wrong. Please try again.');
+            setError('Algo ha ido mal. Por favor, inténtalo de nuevo.');
             setIsLoading(false);
         }
     };
@@ -41,11 +41,11 @@ export const LoginPage = () => {
         <div className="auth-page">
             <div className="auth-card">
                 <img src="/favicon.svg" alt="AIyama Logo" className="auth-logo" />
-                <h1>Welcome back</h1>
-                <p>Log in to your AIyama account</p>
+                <h1>Bienvenido de vuelta</h1>
+                <p>Inicia sesión en tu cuenta de AIyama</p>
                 <LoginForm onSubmit={handleLogin} isLoading={isLoading} error={error} />
                 <p className="auth-switch">
-                    Don't have an account? <Link to="/register">Sign up</Link>
+                    ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
                 </p>
             </div>
         </div>

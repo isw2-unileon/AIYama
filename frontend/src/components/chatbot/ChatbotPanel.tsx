@@ -22,9 +22,6 @@ export const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ userId, chronotype, 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
-
-        // We only send the input text, userId and chronotype. 
-        // The AI will extract duration and frequency internally.
         handleSendMessage(input, userId, chronotype);
         setInput('');
     };
@@ -34,7 +31,7 @@ export const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ userId, chronotype, 
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
                 <h2 className="font-semibold flex items-center gap-2">
                     <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                    AI Assistant
+                    Asistente IA
                 </h2>
                 <button onClick={handleClearChat} className="text-xs text-slate-300 hover:text-white underline">
                     Limpiar
@@ -83,7 +80,7 @@ export const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ userId, chronotype, 
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ej: Estudiar 2h, 3 días/semana..."
+                    placeholder="Ej: Quiero ir al gimnasio 1h, 3 días/semana..."
                     className="w-full p-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                     disabled={isLoading}
                 />
