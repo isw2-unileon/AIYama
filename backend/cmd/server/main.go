@@ -14,6 +14,8 @@ import (
 	"aiyama-backend/internal/handlers"
 	"aiyama-backend/internal/middleware"
 
+	"github.com/gin-contrib/cors"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,6 +32,13 @@ func main() {
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
+
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization", "Accept"}
+
+	r.Use(cors.New(corsConfig))
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -58,8 +67,16 @@ func main() {
 		})
 	}
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = cfg.Port
+		if port == "" {
+			port = "8080"
+		}
+	}
+
 	srv := &http.Server{
-		Addr:         ":" + cfg.Port,
+		Addr:         "0.0.0.0:" + cfg.Port,
 		Handler:      r,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
