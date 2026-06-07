@@ -17,12 +17,16 @@ export const RegisterPage = () => {
             const response = await registerUser(data);
             if (response.error) {
                 setError(response.error);
+                setIsLoading(false);
                 return;
             }
+
+            localStorage.setItem(`needsOnboarding_${data.email}`, 'true');
+
             setSuccess(true);
             setTimeout(() => navigate('/login'), 2000);
         } catch {
-            setError('Something went wrong. Please try again.');
+            setError('Algo ha ido mal. Por favor, inténtalo de nuevo.');
         } finally {
             setIsLoading(false);
         }
@@ -31,18 +35,18 @@ export const RegisterPage = () => {
     return (
         <div className="auth-page">
             <div className="auth-card">
-                <h1>Create account</h1>
-                <p>Start optimizing your time with AIyama</p>
-
+                <img src="/favicon.svg" alt="AIyama Logo" className="auth-logo" />
+                <h1>Crear cuenta</h1>
+                <p>Empieza a optimizar tu tiempo con AIyama</p>
                 {success ? (
                     <p className="success-message">
-                        Account created successfully! Redirecting to login...
+                        ¡Cuenta creada con éxito! Redirigiendo al inicio de sesión...
                     </p>
                 ) : (
                     <>
                         <RegisterForm onSubmit={handleRegister} isLoading={isLoading} error={error} />
                         <p className="auth-switch">
-                            Already have an account? <Link to="/login">Log in</Link>
+                            ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
                         </p>
                     </>
                 )}

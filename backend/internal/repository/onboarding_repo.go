@@ -30,12 +30,13 @@ func GetFixedBlocksByUserID(ctx context.Context, db *sqlx.DB, userID string) ([]
 func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayload) error {
 	userID, ok := ctx.Value(middleware.UserIDKey).(string)
 	if !ok {
-		return errors.New("no se encontró el user_id en el contexto")
+		return errors.New("user_id not found in context")
 	}
 	data.UserID = userID
+
+	// Clean day of week values
 	for i := range data.FixedBlocks {
 		data.FixedBlocks[i].UserID = userID
-
 		d := data.FixedBlocks[i].DayOfWeek
 		d = ((d % 7) + 7) % 7
 		if d == 0 {
@@ -43,10 +44,18 @@ func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayl
 		}
 		data.FixedBlocks[i].DayOfWeek = d
 	}
+
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM fixed_blocks WHERE user_id = $1", userID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	// the IDs are generated automatically by postgre
 	profileQuery := `
 		INSERT INTO activity_profiles (user_id, chronotype, sleep_hours_goal, sleep_start, sleep_end) 
@@ -77,6 +86,7 @@ func SaveOnboarding(ctx context.Context, db *sqlx.DB, data models.OnboardingPayl
 			}
 		}
 	}
+
 	// commit the transaction only if successful
 	return tx.Commit()
 }
@@ -91,7 +101,6 @@ func GetOnboardingData(ctx context.Context, db *sqlx.DB, userID string) (*models
 	}
 
 	blocksQuery := `SELECT name, day_of_week, start_time, end_time FROM fixed_blocks WHERE user_id = $1`
-
 	payload.FixedBlocks = []models.FixedBlock{}
 	err = db.SelectContext(ctx, &payload.FixedBlocks, blocksQuery, userID)
 	if err != nil {

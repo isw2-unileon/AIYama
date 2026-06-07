@@ -23,9 +23,9 @@ export const LoginForm = ({ onSubmit, isLoading, error }: LoginFormProps) => {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
             <div className="form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">Correo electrónico</label>
                 <input
                     id="email"
                     name="email"
@@ -34,11 +34,11 @@ export const LoginForm = ({ onSubmit, isLoading, error }: LoginFormProps) => {
                     onChange={handleChange}
                     placeholder="tu@email.com"
                     required
+                    autoComplete="off"
                 />
             </div>
-
             <div className="form-group">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">Contraseña</label>
                 <input
                     id="password"
                     name="password"
@@ -47,13 +47,12 @@ export const LoginForm = ({ onSubmit, isLoading, error }: LoginFormProps) => {
                     onChange={handleChange}
                     placeholder="••••••••"
                     required
+                    autoComplete="new-password"
                 />
             </div>
-
             {error && <p className="error-message">{error}</p>}
-
             <button type="submit" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Log in'}
+                {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
         </form>
     );

@@ -46,6 +46,16 @@ func main() {
 			handlers.SetupFlexibleTaskRoutes(protected, db)
 			handlers.SetupAIRoutes(protected, db, cfg)
 		}
+
+		api.DELETE("/calendar/snapshots", func(c *gin.Context) {
+			_, err := db.Exec("DELETE FROM calendar_snapshots")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudieron limpiar los snapshots"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "Snapshots limpiados correctamente"})
+		})
 	}
 
 	srv := &http.Server{
