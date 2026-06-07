@@ -50,9 +50,9 @@ export const OnboardingPage = () => {
     });
 
     // --- TEMPORARY STATE TO ADD A BLOCK ---
-    const [currentBlock, setCurrentBlock] = useState<FixedBlock>({
+    const [currentBlock, setCurrentBlock] = useState({
         name: '',
-        dayOfWeek: 0, // Everyday by default
+        daysOfWeek: [] as number[], // multiple days selection
         startTime: '',
         endTime: '',
     });
@@ -136,25 +136,14 @@ export const OnboardingPage = () => {
                 });
             }
 
-            // 2. EXPAND USER BLOCKS (if Everyday is selected, it is multiplied by 7)
+            // 2. EXPAND USER BLOCKS
             formData.fixedBlocks.forEach(block => {
-                if (Number(block.dayOfWeek) === 0) {
-                    for (let d = 1; d <= 7; d++) {
-                        expandedBlocks.push({
-                            name: block.name,
-                            day_of_week: d,
-                            start_time: block.startTime,
-                            end_time: block.endTime
-                        });
-                    }
-                } else {
-                    expandedBlocks.push({
-                        name: block.name,
-                        day_of_week: Number(block.dayOfWeek),
-                        start_time: block.startTime,
-                        end_time: block.endTime
-                    });
-                }
+                expandedBlocks.push({
+                    name: block.name,
+                    day_of_week: Number(block.dayOfWeek),
+                    start_time: block.startTime,
+                    end_time: block.endTime
+                });
             });
 
             // here we prepare the data to send to the backend, we can do some transformations if needed
@@ -193,31 +182,54 @@ export const OnboardingPage = () => {
     };
 
     // --- FUNCTIONS FOR FIXED BLOCKS ---
-    const handleBlockChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleBlockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCurrentBlock({ ...currentBlock, [e.target.name]: e.target.value });
+    };
+
+    // toggles a day in the array
+    const handleDayToggle = (dayId: number) => {
+        setCurrentBlock(prev => ({
+            ...prev,
+            daysOfWeek: prev.daysOfWeek.includes(dayId)
+                ? prev.daysOfWeek.filter(d => d !== dayId) // remove if exists
+                : [...prev.daysOfWeek, dayId] // add if missing
+        }));
     };
 
     const handleAddBlock = (e: React.FormEvent) => {
         e.preventDefault(); // avoids page reload
 
-        // avoid the user pressing the button twice and adding the exact same block visually
-        const isDuplicate = formData.fixedBlocks.some(b =>
-            b.name === currentBlock.name &&
-            Number(b.dayOfWeek) === Number(currentBlock.dayOfWeek) &&
-            b.startTime === currentBlock.startTime &&
-            b.endTime === currentBlock.endTime
-        );
-
-        if (!isDuplicate) {
-            // save the block in the main list
-            setFormData({
-                ...formData,
-                fixedBlocks: [...formData.fixedBlocks, currentBlock]
-            });
+        if (currentBlock.daysOfWeek.length === 0) {
+            alert("Por favor, selecciona al menos un día de la semana.");
+            return;
         }
 
-        // clear the temporary form to be able to add another new block
-        setCurrentBlock({ name: '', dayOfWeek: 0, startTime: '', endTime: '' });
+        // create blocks for each selected day
+        const newBlocks = currentBlock.daysOfWeek.map(day => ({
+            name: currentBlock.name,
+            dayOfWeek: day,
+            startTime: currentBlock.startTime,
+            endTime: currentBlock.endTime
+        }));
+
+        // filter out duplicates
+        const uniqueNewBlocks = newBlocks.filter(newBlock => 
+            !formData.fixedBlocks.some(b => 
+                b.name === newBlock.name && 
+                Number(b.dayOfWeek) === Number(newBlock.dayOfWeek) && 
+                b.startTime === newBlock.startTime && 
+                b.endTime === newBlock.endTime
+            )
+        );
+
+        // save the blocks in the main list
+        setFormData({
+            ...formData,
+            fixedBlocks: [...formData.fixedBlocks, ...uniqueNewBlocks]
+        });
+
+        // clear the temporary form
+        setCurrentBlock({ name: '', daysOfWeek: [], startTime: '', endTime: '' });
     };
 
     const handleRemoveBlock = (indexToRemove: number) => {
@@ -227,6 +239,9 @@ export const OnboardingPage = () => {
             fixedBlocks: formData.fixedBlocks.filter((_, index) => index !== indexToRemove)
         });
     };
+
+    // helper array for UI buttons (excluding "Todos los días")
+    const weekDaysButtons = daysOfWeek.filter(d => d.value !== 0);
 
     return (
         <div className="auth-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '20px' }}>
@@ -292,24 +307,39 @@ export const OnboardingPage = () => {
 
                         {/* FORM TO ADD A BLOCK */}
                         <form onSubmit={handleAddBlock} className="auth-form" style={{ padding: '20px', background: 'var(--code-bg)', borderRadius: '8px', marginBottom: '20px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '14px' }}>Nombre (ej. Universidad)</label>
+                                <input name="name" type="text" value={currentBlock.name} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)' }} />
+                            </div>
+
+                            {/* MULTI-DAY BUTTONS */}
+                            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '14px' }}>Días de la semana</label>
+                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'space-between' }}>
+                                    {weekDaysButtons.map(day => (
+                                        <button
+                                            type="button"
+                                            key={day.value}
+                                            onClick={() => handleDayToggle(day.value)}
+                                            style={{
+                                                padding: '8px 4px',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border)',
+                                                background: currentBlock.daysOfWeek.includes(day.value) ? 'var(--text-h)' : 'var(--bg)',
+                                                color: currentBlock.daysOfWeek.includes(day.value) ? 'var(--bg)' : 'var(--text-h)',
+                                                cursor: 'pointer',
+                                                flex: 1,
+                                                fontSize: '13px',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            {day.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '14px' }}>Nombre (ej. Universidad)</label>
-                                    <input name="name" type="text" value={currentBlock.name} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)' }} />
-                                </div>
-                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '14px' }}>Día de la semana</label>
-                                    <select name="dayOfWeek" value={currentBlock.dayOfWeek} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)', width: '100%' }}>
-                                        <option value="0">Todos los días</option>
-                                        <option value="1">Lun</option>
-                                        <option value="2">Mar</option>
-                                        <option value="3">Mié</option>
-                                        <option value="4">Jue</option>
-                                        <option value="5">Vie</option>
-                                        <option value="6">Sáb</option>
-                                        <option value="7">Dom</option>
-                                    </select>
-                                </div>
                                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <label style={{ fontSize: '14px' }}>Hora de inicio</label>
                                     <input name="startTime" type="time" value={currentBlock.startTime} onChange={handleBlockChange} required style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-h)' }} />

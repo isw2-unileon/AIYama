@@ -21,7 +21,7 @@ func GetUserSleepTimes(ctx context.Context, db *sqlx.DB, userID string) (string,
 // GetFixedBlocksByUserID retrieves the fixed blocks for a given user from the database.
 func GetFixedBlocksByUserID(ctx context.Context, db *sqlx.DB, userID string) ([]models.FixedBlock, error) {
 	var blocks []models.FixedBlock
-	query := `SELECT id, user_id, name, day_of_week, start_time, end_time FROM fixed_blocks WHERE user_id = $1`
+	query := `SELECT name, day_of_week, start_time, end_time FROM fixed_blocks WHERE user_id = $1`
 	err := db.SelectContext(ctx, &blocks, query, userID)
 	return blocks, err
 }

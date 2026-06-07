@@ -42,22 +42,22 @@ func GenerateScheduleProposal(apiKey, rawPrompt, taskName string, duration, freq
 		- Duración por sesión: %d minutos
 		- Cronotipo: %s
 
-		Huecos libres en el calendario:
+		Huecos libres en el calendario (SOLO PUEDES ELEGIR DE AQUÍ):
 		%s
 
 		INSTRUCCIONES CLAVE:
-		1. Lee el mensaje original del usuario. Si menciona fechas específicas ("el mes que viene los dos primeros martes", "mañana", "en diciembre"), DEBES partir de la fecha de hoy y calcular matemáticamente qué días exactos son esos.
-		2. Si no menciona ninguna fecha, asume que es para los próximos días partiendo de hoy.
-		3. Ignora los huecos libres si el usuario pide explícitamente un día concreto que no está en la lista de huecos. Prioriza siempre lo que el usuario ha escrito en su mensaje original.
-		4. Devuelve el resultado en un JSON estricto. En el array "sessions" debes generar tantas sesiones como el usuario necesite (en tu ejemplo, 2 martes), usando fechas reales ISO-8601 (YYYY-MM-DDTHH:MM:SSZ).
+		1. Lee el mensaje original del usuario. Si menciona fechas o días específicos ("mañana", "el lunes"), busca esos días ÚNICAMENTE dentro de la lista de 'Huecos libres en el calendario'.
+		2. Si no menciona ninguna fecha, asume que es para los próximos días partiendo de hoy, priorizando el hueco que mejor encaje con su cronotipo.
+		3. REGLA ESTRICTA: DEBES elegir los horarios OBLIGATORIAMENTE de la lista de 'Huecos libres en el calendario'. BAJO NINGÚN CONCEPTO inventes horarios ni te saltes las restricciones. Si el usuario pide explícitamente un día u hora que NO está en la lista de huecos libres, IGNORA su petición y asígnale el hueco libre válido más cercano.
+		4. Devuelve el resultado en un JSON estricto. Genera las fechas en formato ISO-8601 pero CON LA ZONA HORARIA DE ESPAÑA (+02:00) en lugar de la Z de UTC.
 
 		Usa ESTRICTAMENTE esta estructura JSON:
 		{
-			"reason": "Explicación de por qué elegiste estas fechas (ej: 'He programado la tarea para los dos primeros martes del mes que viene como pediste')",
+			"reason": "Explicación breve, natural y amigable de por qué elegiste estas fechas (ej: 'He programado tus sesiones a las 15:00 ya que es tu primer hueco libre después de tus bloques fijos'). NO hables como un robot, NO menciones 'huecos leídos' ni pongas números de lista.",
 			"sessions": [
 				{
-					"start_time": "<FECHA_REAL_CALCULADA>",
-					"end_time": "<FECHA_REAL_CALCULADA>"
+					"start_time": "YYYY-MM-DDTHH:MM:SS+02:00",
+					"end_time": "YYYY-MM-DDTHH:MM:SS+02:00"
 				}
 			]
 		}
