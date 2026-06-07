@@ -4,6 +4,7 @@ import { WeeklyCalendar } from '../components/calendar/WeeklyCalendar';
 import { type CalendarEvent } from '../types/calendar.types';
 import { ChatbotPanel } from '../components/chatbot/ChatbotPanel';
 import { supabase } from '../lib/supabase';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const formatTimeRobust = (timeStr: string) => {
     if (!timeStr) return "00:00";
@@ -71,7 +72,7 @@ export const DashboardPage: React.FC = () => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
-                await fetch('/api/calendar/snapshots', {
+                await fetch(`${API_BASE_URL}/api/calendar/snapshots`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -105,8 +106,8 @@ export const DashboardPage: React.FC = () => {
 
         try {
             const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-            const tasksRes = await fetch('/api/tasks', { headers, cache: 'no-store' }).catch(() => null);
-            const onboardingRes = await fetch('/api/onboarding', { headers, cache: 'no-store' }).catch(() => null);
+            const tasksRes = await fetch(`${API_BASE_URL}/api/tasks`, { headers, cache: 'no-store' }).catch(() => null);
+            const onboardingRes = await fetch(`${API_BASE_URL}/api/onboarding`, { headers, cache: 'no-store' }).catch(() => null);
 
             let fixedEvents: CalendarEvent[] = [];
             let flexibleEvents: CalendarEvent[] = [];
@@ -176,7 +177,7 @@ export const DashboardPage: React.FC = () => {
         if (!token) return;
 
         try {
-            const response = await fetch(`/api/tasks/${realTaskId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/tasks/${realTaskId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -201,7 +202,7 @@ export const DashboardPage: React.FC = () => {
         if (!token) return;
 
         try {
-            const response = await fetch('/api/tasks/undo', {
+            const response = await fetch(`${API_BASE_URL}/api/tasks/undo`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // what shape does a "Fixed Block" have?
 export type FixedBlock = {
@@ -63,7 +64,7 @@ export const OnboardingPage = () => {
             if (!token) return;
 
             try {
-                const response = await fetch('/api/onboarding', {
+                const response = await fetch(`${API_BASE_URL} / api / onboarding`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -156,7 +157,7 @@ export const OnboardingPage = () => {
             };
 
             // we send it to the backend API
-            const response = await fetch('/api/onboarding', {
+            const response = await fetch(`${API_BASE_URL}/api/onboarding`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -213,11 +214,11 @@ export const OnboardingPage = () => {
         }));
 
         // filter out duplicates
-        const uniqueNewBlocks = newBlocks.filter(newBlock => 
-            !formData.fixedBlocks.some(b => 
-                b.name === newBlock.name && 
-                Number(b.dayOfWeek) === Number(newBlock.dayOfWeek) && 
-                b.startTime === newBlock.startTime && 
+        const uniqueNewBlocks = newBlocks.filter(newBlock =>
+            !formData.fixedBlocks.some(b =>
+                b.name === newBlock.name &&
+                Number(b.dayOfWeek) === Number(newBlock.dayOfWeek) &&
+                b.startTime === newBlock.startTime &&
                 b.endTime === newBlock.endTime
             )
         );
