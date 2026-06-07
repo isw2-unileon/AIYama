@@ -1,9 +1,11 @@
 # Alyama: AI-Driven Dynamic Scheduler
 
 ## About the Project
-Alyama is a dynamic and proactive scheduling system designed to act as a time-optimization assistant. Unlike traditional calendars, it manages schedules, calculates optimal time slots based on the user's energy levels (chronotypes), and uses a local/cloud AI chatbot (Gemini) to reach consensus on task distribution. 
+Alyama is a dynamic and proactive scheduling system designed to act as a time-optimization assistant. Unlike traditional calendars, it manages schedules, calculates optimal time slots based on the user's energy levels (chronotypes), and uses a cloud-based AI chatbot (Google Gemini API) to negotiate and reach consensus on task distribution. 
 
 ## Tech Stack
+
+AI Integration: Google Gemini API (Natural Language Processing & Allocation Engine)
 
 **Frontend:**
 - React (SPA) + TypeScript
@@ -28,13 +30,15 @@ Alyama is a dynamic and proactive scheduling system designed to act as a time-op
 ## Project Structure
 
 ```text
-├── backend/              Go API server & Calculation Engine (Gin)
-├── frontend/             React + TypeScript + Vite + Tailwind
-├── docs/                 Technical documentation (SRS, Architecture)
-├── e2e/                  Playwright E2E tests
-├── .github/workflows/    CI/CD pipelines
-├── docker-compose.yml    Docker orchestration for backend services
-└── Makefile              Dev commands
+├── backend/
+│   ├── cmd/server/       # Entry point (main.go)
+│   ├── internal/         # Core business logic (auth, engine, handlers, models, repository)
+│   └── database/         # SQL Migrations
+├── frontend/             # React source code (components, hooks, pages, services)
+├── docs/                 # Technical documentation
+├── e2e/                  # Playwright E2E tests
+├── .github/workflows/    # CI/CD pipelines
+└── ...
 ```
 
 ## Prerequisites
@@ -85,5 +89,10 @@ The Vite dev server automatically proxies `/api` requests to the Go backend.
 | Method | Path             | Description                                      |
 |--------|----------------- |--------------------------------------------------|
 | `GET`  | `/health`        | Health check to verify API status                |
-| `POST` | `/api/chat`      | Sends user input to the AI scheduling engine     |
+| `POST` | `/api/onboarding`| Saves user chronotype and fixed schedule blocks  |
+| `GET`  | `/api/onboarding`| Fetches user onboarding data                     |
+| `POST` | `/api/propose-schedule` | Sends task request to the AI engine       |
+| `GET`  | `/api/tasks`     | Retrieves all scheduled tasks                    |
 | `POST` | `/api/tasks`     | Saves a confirmed task into the database         |
+| `DELETE`| `/api/tasks/:id` | Removes a task from the schedule                |
+| `POST` | `/api/tasks/undo`| Reverts the last deletion (Rollback)             |

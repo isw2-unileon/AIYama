@@ -56,46 +56,109 @@ func createProposalHandler(db *sqlx.DB, cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		// fetch and clean sleep times
 		sleepStart, sleepEnd, err := repository.GetUserSleepTimes(ctx, db, req.UserID)
 		if err != nil {
 			sleepStart = "23:00"
 			sleepEnd = "07:00"
+		} else {
+			if len(sleepStart) >= 5 {
+				sleepStart = sleepStart[:5]
+			}
+			if len(sleepEnd) >= 5 {
+				sleepEnd = sleepEnd[:5]
+			}
 		}
 
+		// helper to format any time string to "HH:MM"
+		cleanTime := func(timeStr string) string {
+			if t, err := time.Parse(time.RFC3339, timeStr); err == nil {
+				return t.Format("15:04")
+			}
+			if len(timeStr) >= 16 {
+				return timeStr[11:16]
+			}
+			if len(timeStr) >= 5 {
+				return timeStr[:5]
+			}
+			return timeStr
+		}
+
+		// fetch fixed blocks
 		fixedBlocks, err := repository.GetFixedBlocksByUserID(ctx, db, req.UserID)
 		if err != nil {
 			fixedBlocks = []models.FixedBlock{}
 		}
 
+		// clean fixed blocks and split them if they cross midnight
+		var processedBlocks []models.FixedBlock
+		for _, b := range fixedBlocks {
+			b.StartTime = cleanTime(b.StartTime)
+			b.EndTime = cleanTime(b.EndTime)
+
+			if b.StartTime > b.EndTime {
+				// split block at midnight
+				b1 := b
+				b1.EndTime = "23:59"
+				processedBlocks = append(processedBlocks, b1)
+
+				b2 := b
+				b2.StartTime = "00:00"
+				processedBlocks = append(processedBlocks, b2)
+			} else {
+				processedBlocks = append(processedBlocks, b)
+			}
+		}
+		fixedBlocks = processedBlocks
+
 		scheduledEvents, err := repository.GetCalendarEventsByUserID(ctx, db, req.UserID)
 		if err != nil {
 			scheduledEvents = []engine.ScheduledEvent{}
 		}
+		// clean scheduled events times
+		for i := range scheduledEvents {
+			scheduledEvents[i].StartTime = cleanTime(scheduledEvents[i].StartTime)
+			scheduledEvents[i].EndTime = cleanTime(scheduledEvents[i].EndTime)
+		}
 
 		// 2. use the duration extracted by Gemini to find the free slots in the user's calendar that fit that duration, taking into account the fixed blocks and sleep times
 		now := time.Now()
-
-		indiceHoy := int(now.Weekday())
 		horaActualStr := now.Format("15:04")
 
 		var realFreeSlots strings.Builder
-		for day := 0; day < 7; day++ {
-			if day < indiceHoy {
-				continue
+
+		// check the next 7 days for free slots
+		for i := 0; i < 7; i++ {
+			targetDate := now.AddDate(0, 0, i)
+
+			// Weekday in Go: 0=Domingo, 1=Lunes... 6=Sábado
+			goDay := int(targetDate.Weekday())
+
+			// translate to our DB format: 1=Lunes, 2=Martes... 7=Domingo
+			dbDay := goDay
+			if dbDay == 0 {
+				dbDay = 7
 			}
-			slots := engine.FindFreeSlotsForDay(day, fixedBlocks, scheduledEvents, sleepStart, sleepEnd, extracted.DurationMinutes)
+
+			// search for free slots on that day
+			slots := engine.FindFreeSlotsForDay(dbDay, fixedBlocks, scheduledEvents, sleepStart, sleepEnd, extracted.DurationMinutes)
 
 			for _, slot := range slots {
-				if day == indiceHoy {
+				// If we are evaluating "today" (i == 0), we block the hours that have already passed
+				if i == 0 {
 					if slot.EndTime <= horaActualStr {
-						continue
+						continue // Discard slot if it has already passed
 					}
 					if slot.StartTime < horaActualStr {
-						slot.StartTime = horaActualStr
+						slot.StartTime = horaActualStr // if the slot has already started but not ended, we adjust the start time to the current time
 					}
 				}
-				dayName := dayOfWeekToString(slot.DayOfWeek)
-				realFreeSlots.WriteString(fmt.Sprintf("- %s de %s a %s\n", dayName, slot.StartTime, slot.EndTime))
+
+				// extract the real date for that day of the week (we know que el targetDate es el día que estamos evaluando, así que ya tenemos la fecha real calculada)
+				dateStr := targetDate.Format("2006-01-02")
+				dayName := dayOfWeekToString(goDay)
+
+				realFreeSlots.WriteString(fmt.Sprintf("- %s (%s) de %s a %s\n", dateStr, dayName, slot.StartTime, slot.EndTime))
 			}
 		}
 
