@@ -140,11 +140,11 @@ export const DashboardPage: React.FC = () => {
                             id: `task-${task.id}`,
                             title: task.title || task.name,
                             dayOfWeek: dayOfWeek,
-                            startTime: startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-                            endTime: endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                            startTime: startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                            endTime: endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }),
                             isFixed: false,
                             colorClass: randomColor,
-                            date: startDate.toLocaleDateString('en-US')
+                            date: startDate.toLocaleDateString('es-ES')
                         };
                     });
             }
