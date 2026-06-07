@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 // This file defines the types for the AI service, which is responsible for generating schedule proposals based on user input and calendar data.
 export interface ScheduleRequest {
   user_id: string;
@@ -13,7 +15,7 @@ export const aiService = {
   proposeSchedule: async (data: ScheduleRequest, token: string) => {
     try {
       // we send a POST request to the backend endpoint that handles schedule proposals, passing the user input as JSON in the request body
-      const response = await fetch('/api/propose-schedule', {
+      const response = await fetch(`${API_BASE_URL}/api/propose-schedule`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
